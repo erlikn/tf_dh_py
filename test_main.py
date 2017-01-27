@@ -27,8 +27,11 @@ from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 import tensorflow.python.debug as tf_debug
 
-with open('Model_Settings/170125_MomentumOpt_256_256_BNorm.json') as data_file:    
+with open('Model_Settings/170126_SIN_B.json') as data_file:    
     modelParams = json.load(data_file)
+
+modelParams['batchNorm'] = False
+modelParams['weightNorm'] = False
 
 import data_input
 model_cnn = importlib.import_module('Model_Factory.'+modelParams['modelName']) # import corresponding model name as model_cnn
