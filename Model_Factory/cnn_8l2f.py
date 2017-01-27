@@ -235,7 +235,7 @@ def fc_regression_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **
             #biases = tf.get_variable('biases', fireDims['fc'],
             #                         initializer=tf.constant_initializer(0.0), dtype=dtype)
             #bias = tf.nn.bias_add(fc, biases)
-            _activation_summary(fcBatchNorm)
+            _activation_summary(fc)
         
         return fc, fireDims['fc']
 
@@ -397,9 +397,8 @@ def _add_loss_summaries(total_loss, batchSize):
     loss_averages_op = loss_averages.apply(losses + [total_loss])
 
     # Individual average loss
-    lossPixelIndividual = tf.sqrt(tf.mul(total_loss, 2/(48*8)))
+    lossPixelIndividual = tf.sqrt(tf.mul(total_loss, 2/(batchSize*8)))
     tf.summary.scalar('Average_Pixel_Error', lossPixelIndividual)
-
 
     # Attach a scalar summary to all individual losses and the total loss; do the
     # same for the averaged version of the losses.

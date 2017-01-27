@@ -27,16 +27,14 @@ from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 import tensorflow.python.debug as tf_debug
 
-with open('Model_Settings/data.json') as data_file:    
+with open('Model_Settings/170126_SIN_B.json') as data_file:    
     modelParams = json.load(data_file)
 
 import data_input
 model_cnn = importlib.import_module('Model_Factory.'+modelParams['modelName']) # import corresponding model name as model_cnn
 
-
 ####################################################
 FLAGS = tf.app.flags.FLAGS
-
 tf.app.flags.DEFINE_integer('printOutStep', 10,
                             """Number of batches to run.""")
 tf.app.flags.DEFINE_integer('summaryWriteStep', 100,
@@ -44,33 +42,53 @@ tf.app.flags.DEFINE_integer('summaryWriteStep', 100,
 tf.app.flags.DEFINE_integer('modelCheckpointStep', 1000,
                             """Number of batches to run.""")
 ####################################################
-def _get_params():
-    modelParams = {'phase': 'test'}           
+def _get_control_params():
+    modelParams['phase'] = 'train'           
+    #params['shardMeta'] = model_cnn.getShardsMetaInfo(FLAGS.dataDir, params['phase'])
     
     modelParams['existingParams'] = None
-
+    if modelParams['initExistingWeights'] is not None and modelParams['initExistingWeights'] != "":
+        modelParams['existingParams'] = np.load(modelParams['initExistingWeights']).item()
+    
     if modelParams['phase'] == 'train':
         modelParams['activeBatchSize'] = modelParams['trainBatchSize']
         modelParams['maxSteps'] = modelParams['trainMaxSteps']
         modelParams['numExamplesPerEpoch'] = modelParams['numTrainDatasetExamples']
-    
+        modelParams['dataDir'] = modelParams['trainDataDir']
+
     if modelParams['phase'] == 'test':
         modelParams['activeBatchSize'] = modelParams['testBatchSize']
         modelParams['maxSteps'] = modelParams['testMaxSteps']
         modelParams['numExamplesPerEpoch'] = modelParams['numTestDatasetExamples']
+        modelParams['dataDir'] = modelParams['testDataDir']
 
 
-def test():
+def train():
+    _get_control_params()
+
     if not os.path.exists(modelParams['dataDir']):
-        raise ValueError("No such data directory %s" % modelParams['dataDir'])
-    _get_params()
+        raise ValueError("No such data directory %s" % modelParams['dataDir'])    
 
-    lossValueSum = 0
+    minPixelLoss = 999999.99
 
-    _setupLogging(os.path.join(modelParams['testLogDir'], "genlog"))
+    #meanImgFi1000le = os.path.join(FLAGS.dataDir, "meta")
+    #if not os.path.isfile(meanImgFile):
+    #    raise ValueError("Warning, no meta file found at %s" % meanImgFile)
+    #else:
+    #    with open(meanImgFile, "r") as inMeanFile:
+    #        meanInfo = json.load(inMeanFile)
+    #        
+    #    meanImg = meanInfo['mean']
+    #    
+    #    # also load the target output sizes
+    #    params['targSz'] = meanInfo["targSz"]
+        
+    _setupLogging(os.path.join(modelParams['trainLogDir'], "genlog"))
     
     with tf.Graph().as_default():
-
+        # BGR to RGB
+        #params['meanImg'] = tf.constant(meanImg, dtype=tf.float32)
+        
         # track the number of train calls (basically number of batches processed)
         globalStep = tf.get_variable('globalStep',
                                      [],
@@ -89,9 +107,12 @@ def test():
 
         # Build a Graph that trains the model with one batch of examples and
         # updates the model parameters.
-        opTest = model_cnn.test(loss, globalStep, **modelParams)
+        opTrain = model_cnn.train(loss, globalStep, **modelParams)
         ##############################
         
+        # Create a saver.
+        saver = tf.train.Saver(tf.global_variables())
+
         # Build the summary operation based on the TF collection of Summaries.
         summaryOp = tf.summary.merge_all()
 
@@ -106,24 +127,20 @@ def test():
         #sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
         sess.run(init)
 
-        # restore a saver.
-        saver = tf.train.Saver(tf.global_variables())
-        saver.restore(sess, modelParams['trainLogDir']+'/model.ckpt-149999')
-
         # Start the queue runners.
         tf.train.start_queue_runners(sess=sess)
 
-        summaryWriter = tf.summary.FileWriter(modelParams['testLogDir'], sess.graph)
+        summaryWriter = tf.summary.FileWriter(modelParams['trainLogDir'], sess.graph)
 
         for step in xrange(modelParams['maxSteps']):
             startTime = time.time()
-            _, lossValue = sess.run([opTest, loss])
+            _, lossValue = sess.run([opTrain, loss])
             duration = time.time() - startTime
 
             assert not np.isnan(lossValue), 'Model diverged with loss = NaN'
-
-            lossValueSum += np.sqrt(lossValue*(2/(modelParams['activeBatchSize']*8)))
-            lossValueAvgPixel = lossValueSum/(step+1)
+            
+            # Calculate pixel error for current batch
+            lossValueSumPixel = np.sqrt(lossValue*(2/(modelParams['activeBatchSize']*8)))
             
             if step % FLAGS.printOutStep == 0:
                 numExamplesPerStep = modelParams['activeBatchSize']
@@ -131,18 +148,25 @@ def test():
                 secPerBatch = float(duration)
 
                 format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
-                              'sec/batch), pixelErr = %.3f')
+                              'sec/batch)')
                 logging.info(format_str % (datetime.now(), step, lossValue,
-                                     examplesPerSec, secPerBatch, lossValueAvgPixel))
-            
+                                     examplesPerSec, secPerBatch))
+
             if step % FLAGS.summaryWriteStep == 0:
                 summaryStr = sess.run(summaryOp)
                 summaryWriter.add_summary(summaryStr, step)
 
             # Save the model checkpoint periodically.
-            #if step % FLAGS.modelCheckpointStep == 0 or (step + 1) == FLAGS.maxSteps:
-            #    checkpoint_path = os.path.join(FLAGS.testLogDir, 'model.ckpt')
-            #    saver.save(sess, checkpoint_path, global_step=step)
+            if step % FLAGS.modelCheckpointStep == 0 or (step + 1) == modelParams['maxSteps']:
+                checkpointPath = os.path.join(modelParams['trainLogDir'], 'model.ckpt')
+                saver.save(sess, checkpointPath, global_step=step)
+
+            if step > 10000 and lossValueSumPixel < minPixelLoss:
+                print('saving min loss state')
+                minPixelLoss = lossValueSumPixel
+                checkpointPath = os.path.join(modelParams['trainLogDir'], 'model_minLoss.ckpt')
+                saver.save(sess, checkpointPath)
+
 
 def _setupLogging(logPath):
     # cleanup
@@ -166,16 +190,15 @@ def _setupLogging(logPath):
     logging.info("Logging setup complete to %s" % logPath)
 
 def main(argv=None):  # pylint: disable=unused-argumDt
-    print('Rounds on datase = %.1f' % (modelParams['trainBatchSize']*modelParams['trainMaxSteps'])/modelParams['numTrainDatasetExamples'])
+    print('Rounds on datase = %.1f' % float((modelParams['trainBatchSize']*modelParams['trainMaxSteps'])/modelParams['numTrainDatasetExamples']))
     print(modelParams['trainLogDir'])
-    print(modelParams['testLogDir'])
     if input("(Overwrite WARNING) Did you change logs directory? ") != "yes":
         print("Please consider changing logs directory in order to avoid overwrite!")
         return
-    if tf.gfile.Exists(modelParams['testLogDir']):
-        tf.gfile.DeleteRecursively(modelParams['testLogDir'])
-    tf.gfile.MakeDirs(modelParams['testLogDir'])
-    test()
+    if tf.gfile.Exists(modelParams['trainLogDir']):
+        tf.gfile.DeleteRecursively(modelParams['trainLogDir'])
+    tf.gfile.MakeDirs(modelParams['trainLogDir'])
+    train()
 
 
 if __name__ == '__main__':

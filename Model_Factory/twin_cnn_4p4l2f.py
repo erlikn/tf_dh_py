@@ -43,26 +43,8 @@ import numpy as np
 
 FLAGS = tf.app.flags.FLAGS
 # Basic model parameters.
-#tf.app.kwargs.get('DEFINE_string')('init_existing_weights', '/home/rverbick/ml/nets/SqueezeNet/SqueezeNet_v1.1/tf/squeezenet.npy',
-#                            """Should we load existing weights for training? Leave blank if not.""")
-#tf.app.kwargs.get('DEFINE_boolean')('tuneExistingWeights', True,
-#                            """Should any reloaded weights be tuned?""")
 
 USE_FP_16 = False
-# Global constants describing the DeepHomography_CNN data set.
-# IMAGE_SIZE = data_input.IMAGE_SIZE
-# NUM_CLASSES = data_input.NUM_CLASSES
-# NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = data_input.NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN
-# 
-# Constants describing the training process.
-#NUM_EXAMPLES_PER_EPOCH = 50000  # Total number of samples for training (TRAIN_TOTAL_SAMPLE_SIZE)
-#NUM_EPOCHS_PER_DECAY = 30000      # Epochs after which learning rate decays.
-#LEARNING_RATE_DECAY_FACTOR = 0.1  # Learning rate decay factor.
-#INITIAL_LEARNING_RATE = 0.005       # Initial learning rate.  # Base learning rate = 0.005
-#DROPOUT_KEEP_RATE = 0.5       # Keep rate for drop out
-#IMAGE_SIZE = 128  # 128x128x2
-#IMAGE_CHANNELS = 2  # 128x128x2
-#OUTPUT_SIZE = 8   # 8 variables showing H_AB matrix
 
 # If a model is trained with multiple GPUs, prefix all Op names with tower_name
 # to differentiate the operations. Note that this prefix is removed from the
@@ -486,7 +468,7 @@ def _add_loss_summaries(total_loss, batchSize):
 
     # Individual average loss
     lossPixelIndividual = tf.sqrt(tf.mul(total_loss, 2/(batchSize*8)))
-    tf.summary.scalar("Average_Pixel_Error", lossPixelIndividual)
+    tf.summary.scalar('Average_Pixel_Error', lossPixelIndividual)
 
     # Attach a scalar summary to all individual losses and the total loss; do the
     # same for the averaged version of the losses.
