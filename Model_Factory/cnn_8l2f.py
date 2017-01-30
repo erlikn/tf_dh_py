@@ -326,7 +326,7 @@ def inference(images, **kwargs): #batchSize=None, phase='train', outLayer=[13,13
     
     ############# FC1 layer with 1024 outputs
     fireOut, prevExpandDim = fc_fire_module('fc1', fireOutFlat, prevExpandDim,
-                                            {'fc': 1024},
+                                            {'fc': modelShape[8]},
                                             wd, **kwargs)
     # calc batch norm FC1
     if kwargs.get('batchNorm'):

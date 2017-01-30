@@ -27,11 +27,13 @@ from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 import tensorflow.python.debug as tf_debug
 
-with open('Model_Settings/170126_SIN_B.json') as data_file:    
+with open('Model_Settings/170129_TWN_MOM_B_32.json') as data_file:    
     modelParams = json.load(data_file)
 
+#### Override Model Parameters for Batch Normalization and Weight Normalization
 modelParams['batchNorm'] = False
 modelParams['weightNorm'] = False
+####
 
 import data_input
 model_cnn = importlib.import_module('Model_Factory.'+modelParams['modelName']) # import corresponding model name as model_cnn
@@ -117,7 +119,7 @@ def test():
 
         # restore a saver.
         saver = tf.train.Saver(tf.global_variables())
-        saver.restore(sess, modelParams['trainLogDir']+'/model.ckpt-89999')
+        saver.restore(sess, modelParams['trainLogDir']+'/model.ckpt-'+str(modelParams['trainMaxSteps']-1))
 
         # Start the queue runners.
         tf.train.start_queue_runners(sess=sess)
@@ -175,17 +177,23 @@ def _setupLogging(logPath):
     logging.info("Logging setup complete to %s" % logPath)
 
 def main(argv=None):  # pylint: disable=unused-argumDt
+    #if argv[1]:
+    #    jsonFileName = argv[1]
+    #else:
+    #    print('please choose a json file')
+    #    return
     print('Rounds on datase = %.1f' % float((modelParams['trainBatchSize']*modelParams['trainMaxSteps'])/modelParams['numTrainDatasetExamples']))
     print(modelParams['trainLogDir'])
     print(modelParams['testLogDir'])
-    if input("(Overwrite WARNING) Did you change logs directory? ") != "yes":
+    if input("(Overwrite WARNING) Are you sure about this logs directory? ") != "yes":
         print("Please consider changing logs directory in order to avoid overwrite!")
         return
     if tf.gfile.Exists(modelParams['testLogDir']):
         tf.gfile.DeleteRecursively(modelParams['testLogDir'])
     tf.gfile.MakeDirs(modelParams['testLogDir'])
     test()
-
+    print('Model Shape = %s' % modelParams['modelShape'])
+    print('BNORM = %s , WNORM = %s' % (modelParams['batchNorm'], modelParams['weightNorm']))
 
 if __name__ == '__main__':
     # looks up in the module named "__main__" (which is this module since its whats being run) in the sys.modules

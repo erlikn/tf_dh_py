@@ -27,7 +27,7 @@ from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 import tensorflow.python.debug as tf_debug
 
-with open('Model_Settings/170126_SIN_BW.json') as data_file:    
+with open('Model_Settings/170130_TWN_MOM_B_16.json') as data_file:    
     modelParams = json.load(data_file)
 
 import data_input
