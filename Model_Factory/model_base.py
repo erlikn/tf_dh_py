@@ -124,69 +124,67 @@ def _batch_norm(tensorConv):
     return batchNorm
     
 
-def twin_correlation():
-    """ 
-    Input Args:
-        name:               scope name
-        prevLayerOut:       output tensor of previous layer
-        prevLayerDims:      size of the last (3rd) dimension in prevLayerOut
-        numParallelModules: number of parallel modules and parallel data in prevLayerOut
-        fireDimsSingleModule:     number of output dimensions for each parallel module
-    """
+def twin_correlation(name, prevLayerOut, prevLayerDims, d, s2):
     USE_FP_16 = kwargs.get('usefp16')
     dtype = tf.float16 if USE_FP_16 else tf.float32
-    
-    existingParams = kwargs.get('existingParams')
 
+    D = (2*d)+1
     numParallelModules = kwargs.get('numParallelModules') # 2
-    # Twin network -> numParallelModules = 2
+    # Input from Twin network -> numParallelModules = 2
     # Split tensor through last dimension into numParallelModules tensors
     prevLayerOut = tf.split(3, numParallelModules, prevLayerOut)
     prevLayerIndivDims = prevLayerDims / numParallelModules
 
+    # f1 is a list of size batchSize,x,y of [1,1,c,1] tensors  => last 1 is for the output size
+    prevLayerOut[0] = tf.unpack(prevLayerOut[0], axis=0) # batches seperate
+    for i in range(len(prevLayerOut[0])):
+        prevLayerOut[0][i] = tf.split(0, prevLayerOut[0][i].get_shape()[0], prevLayerOut[0][i]) # X seperate
+        for j in range(len(prevLayerOut[0][i])):
+            prevLayerOut[0][i][j] = tf.split(1, prevLayerOut[0][i][j].get_shape()[1], prevLayerOut[0][i][j]) # Y seperate
+            for k in range(len(prevLayerOut[0][i][j])):
+                prevLayerOut[0][i][j][k] = tf.reshape(prevLayerOut[0][i][j][k], [1, 1, int(prevLayerOut[0][i][j][k].get_shape()[2]), 1])
+                prevLayerOut[0][i][j][k].set_shape([1, 1, int(prevLayerOut[0][i][j][k].get_shape()[2]), 1])
+
+    # padd f2 with 20 zeros on each side
+    # output is batch x [1, x+2d, y+2d, c]
+    prevLayerOut[1] = tf.split(0, prevLayerOut[1].get_shape()[0], prevLayerOut[1]) # batches seperate
+    for i in range(len(prevLayerOut[1])):
+        prevLayerOut[1][i] = tf.pad(prevLayerOut[1][i], [[0,0],[d,d],[d,d],[0,0]], mode='CONSTANT', name=None)
+
+    # correlation
     with tf.variable_scope(name):
         with tf.variable_scope('corr1x1') as scope:
-            prevLayerOut[numParallelModules-1]
-            for prl in range(numParallelModules):
-                
-
-
-
-            kernel = _variable_with_weight_decay('weights',
-                                                 shape=[3, 3, prevLayerIndivDims, fireDimsSingleModule['cnn3x3']],
-                                                 initializer=existingParams[layerName]['weights'] if (existingParams is not None and
-                                                                                                     layerName in existingParams) else
-                                                                (tf.random_normal_initializer(stddev=stddev) if kwargs.get('phase')=='train' else
-                                                                 tf.constant_initializer(0.0, dtype=dtype)),
-                                                 wd=wd,
-                                                 trainable=False)
-            
-            for prl in range(numParallelModules):
-                conv = tf.nn.conv2d(prevLayerOut[prl], kernel, [1, 1, 1, 1], padding='SAME')
-                
-                if kwargs.get('weightNorm'):
-                    # calc weight norm
-                    conv = _batch_norm(conv)
-                
-                #if existingParams is not None and layerName in existingParams:
-                #    biases = tf.get_variable('biases',
-                #                             initializer=existingParams[layerName]['biases'], dtype=dtype)
-                #else:
-                #    biases = tf.get_variable('biases', [fireDimsSingleModule['cnn3x3']],
-                #                             initializer=tf.constant_initializer(0.0),
-                #                             dtype=dtype)
-
-                #bias = tf.nn.bias_add(conv, biases)
-                convReluPrl = tf.nn.relu(conv, name=scope.name)
-                # Concatinate results along last dimension to get one output tensor
-                if prl is 0:
-                    convRelu = convReluPrl
-                else:    
-                    convRelu = tf.concat(3, [convRelu, convReluPrl])
-
-            _activation_summary(convRelu)
-
-        return convRelu, numParallelModules*fireDimsSingleModule['cnn3x3']
+            for batches in range(len(prevLayerOut[0])): # batches
+                for i in range(len(prevLayerOut[0][batches])): # X
+                    for j in range(len(prevLayerOut[0][batches][i])): # Y
+                        # kernel_shape = width, height, dims (input), dims (output) [1,1,c,1]
+                        f1kernel = prevLayerOut[0][batches][i][j]
+                        ##print(f1kernel.get_shape())
+                        # inputs of [1, x+2d, y+2d, c]
+                        # Select square subtensor centered at i,j with square size D=2*d+1 and stride 2 in each axis with complete channel data
+                        # if d=20, s2=2 => f2box = [1,21,21,1]
+                        f2box = tf.strided_slice(prevLayerOut[1][batches], [0, i, j], [1, i+D, j+D], [1, s2, s2])
+                        ##print(f2box.get_shape())
+                        # corrsingle is a [1,21,21,1]
+                        # reshape to [1,1,1,21*21] or [1,1,1,441]
+                        corrSingle = tf.reshape(tf.nn.conv2d(f2box, f1kernel, [1, 1, 1, 1], padding='SAME'), [1, 1, 1, D*D])
+                        # concat along height dimension
+                        if j == 0:
+                            corrBox = corrSingle
+                        else:
+                            corrBox = tf.concat(2, [corrBox, corrSingle])
+                    # concat along width dimension
+                    if i == 0:
+                        resultTensor = corrBox
+                    else:
+                        resultTensor = tf.concat(1, [resultTensor, corrBox])
+                # concat along batches
+                if batches == 0:
+                    resultBatch = resultTensor
+                else:
+                    resultBatch = tf.concat(0, [resultBatch, resultTensor])
+    #return resultTensor
+    return resultBatch, D*D
 
 
 def conv_fire_parallel_module(name, prevLayerOut, prevLayerDims, fireDimsSingleModule, wd=None, **kwargs):
@@ -200,7 +198,7 @@ def conv_fire_parallel_module(name, prevLayerOut, prevLayerDims, fireDimsSingleM
     """
     USE_FP_16 = kwargs.get('usefp16')
     dtype = tf.float16 if USE_FP_16 else tf.float32
-    
+
     existingParams = kwargs.get('existingParams')
 
     numParallelModules = kwargs.get('numParallelModules') # 2
@@ -257,7 +255,7 @@ def conv_fire_parallel_module(name, prevLayerOut, prevLayerDims, fireDimsSingleM
 
             _activation_summary(convRelu)
 
-        return convRelu, numParallelModules*fireDimsSingleModule['cnn3x3']
+    return convRelu, numParallelModules*fireDimsSingleModule['cnn3x3']
 
 def conv_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwargs):
     USE_FP_16 = kwargs.get('usefp16')

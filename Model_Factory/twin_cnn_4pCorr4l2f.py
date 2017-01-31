@@ -91,7 +91,12 @@ def inference(images, **kwargs): #batchSize=None, phase='train', outLayer=[13,13
                           padding='SAME', name='maxpool2')
     
     ############# AUGMENT TWIN NETWORK WITH MATCHING DATA AND AUGMENT THE OUTPUT
-
+    corr, corrDims = twin_correlation('corr', fireOut, prevExpandDim, 20, 2)
+    fireOut, prevExpandDim = model_base.conv_fire_parallel_module('conv_redir', fireOut, prevExpandDim,
+                                              {'cnn3x3': 32},
+                                              wd, **kwargs)
+    fireOut = tf.concat(3, [corr, fireOut])
+    prevExpandDim = prevExpandDim + corrDims
     ############# CONV5 3x3 conv, 64 input dims, 64 output dims (filters)
     fireOut, prevExpandDim = model_base.conv_fire_module('conv5', fireOut, prevExpandDim,
                                               {'cnn3x3': modelShape[4]},
