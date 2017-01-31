@@ -25,13 +25,14 @@ import importlib
 import numpy as np
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
-import tensorflow.python.debug as tf_debug
+#import tensorflow.python.debug as tf_debug
+import data_input
 
-with open('Model_Settings/170130_TWN_MOM_B_16.json') as data_file:    
+with open('Model_Settings/170130_TWN_MOM_B_16.json') as data_file:
     modelParams = json.load(data_file)
 
-import data_input
-model_cnn = importlib.import_module('Model_Factory.'+modelParams['modelName']) # import corresponding model name as model_cnn
+# import corresponding model name as model_cnn
+model_cnn = importlib.import_module('Model_Factory.'+modelParams['modelName'])
 
 ####################################################
 FLAGS = tf.app.flags.FLAGS
@@ -43,13 +44,13 @@ tf.app.flags.DEFINE_integer('modelCheckpointStep', 1000,
                             """Number of batches to run.""")
 ####################################################
 def _get_control_params():
-    modelParams['phase'] = 'train'           
+    modelParams['phase'] = 'train'
     #params['shardMeta'] = model_cnn.getShardsMetaInfo(FLAGS.dataDir, params['phase'])
-    
+
     modelParams['existingParams'] = None
     if modelParams['initExistingWeights'] is not None and modelParams['initExistingWeights'] != "":
         modelParams['existingParams'] = np.load(modelParams['initExistingWeights']).item()
-    
+
     if modelParams['phase'] == 'train':
         modelParams['activeBatchSize'] = modelParams['trainBatchSize']
         modelParams['maxSteps'] = modelParams['trainMaxSteps']
@@ -77,18 +78,18 @@ def train():
     #else:
     #    with open(meanImgFile, "r") as inMeanFile:
     #        meanInfo = json.load(inMeanFile)
-    #        
+    #
     #    meanImg = meanInfo['mean']
-    #    
+    #
     #    # also load the target output sizes
     #    params['targSz'] = meanInfo["targSz"]
-        
+
     _setupLogging(os.path.join(modelParams['trainLogDir'], "genlog"))
-    
+
     with tf.Graph().as_default():
         # BGR to RGB
         #params['meanImg'] = tf.constant(meanImg, dtype=tf.float32)
-        
+
         # track the number of train calls (basically number of batches processed)
         globalStep = tf.get_variable('globalStep',
                                      [],
@@ -109,7 +110,7 @@ def train():
         # updates the model parameters.
         opTrain = model_cnn.train(loss, globalStep, **modelParams)
         ##############################
-        
+
         # Create a saver.
         saver = tf.train.Saver(tf.global_variables())
 
@@ -138,10 +139,10 @@ def train():
             duration = time.time() - startTime
 
             assert not np.isnan(lossValue), 'Model diverged with loss = NaN'
-            
+
             # Calculate pixel error for current batch
             lossValueSumPixel = np.sqrt(lossValue*(2/(modelParams['activeBatchSize']*8)))
-            
+
             if step % FLAGS.printOutStep == 0:
                 numExamplesPerStep = modelParams['activeBatchSize']
                 examplesPerSec = numExamplesPerStep / duration
@@ -150,7 +151,7 @@ def train():
                 format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
                               'sec/batch)')
                 logging.info(format_str % (datetime.now(), step, lossValue,
-                                     examplesPerSec, secPerBatch))
+                                           examplesPerSec, secPerBatch))
 
             if step % FLAGS.summaryWriteStep == 0:
                 summaryStr = sess.run(summaryOp)
@@ -172,21 +173,21 @@ def _setupLogging(logPath):
     # cleanup
     if (os.path.isfile(logPath)):
         os.remove(logPath)
-        
+
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                         datefmt='%m-%d %H:%M',
                         filename=logPath,
                         filemode='w')
-    
+
     # also write out to the console
     console = logging.StreamHandler()
     console.setLevel(logging.DEBUG)
     console.setFormatter(logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s'))
-    
+
     # add the handler to the root logger
     logging.getLogger().addHandler(console)
-    
+
     logging.info("Logging setup complete to %s" % logPath)
 
 def main(argv=None):  # pylint: disable=unused-argumDt

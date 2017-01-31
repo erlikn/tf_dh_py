@@ -25,9 +25,11 @@ import importlib
 import numpy as np
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
-import tensorflow.python.debug as tf_debug
+#import tensorflow.python.debug as tf_debug
+import data_input
 
-with open('Model_Settings/170129_TWN_MOM_B_32.json') as data_file:    
+
+with open('Model_Settings/170129_TWN_MOM_B_32.json') as data_file:
     modelParams = json.load(data_file)
 
 #### Override Model Parameters for Batch Normalization and Weight Normalization
@@ -35,9 +37,8 @@ modelParams['batchNorm'] = False
 modelParams['weightNorm'] = False
 ####
 
-import data_input
-model_cnn = importlib.import_module('Model_Factory.'+modelParams['modelName']) # import corresponding model name as model_cnn
-
+# import corresponding model name as model_cnn
+model_cnn = importlib.import_module('Model_Factory.'+modelParams['modelName'])
 
 ####################################################
 FLAGS = tf.app.flags.FLAGS
@@ -50,7 +51,7 @@ tf.app.flags.DEFINE_integer('modelCheckpointStep', 1000,
                             """Number of batches to run.""")
 ####################################################
 def _get_control_params():
-    modelParams['phase'] = 'test'           
+    modelParams['phase'] = 'test'
     
     modelParams['existingParams'] = None
 
@@ -102,7 +103,7 @@ def test():
         # updates the model parameters.
         opTest = model_cnn.test(loss, globalStep, **modelParams)
         ##############################
-        
+
         # Build the summary operation based on the TF collection of Summaries.
         summaryOp = tf.summary.merge_all()
 
