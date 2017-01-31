@@ -2,16 +2,11 @@ from __future__ import absolute_import
 from __future__ import division
 
 import tensorflow as tf
-import numpy as np
-
-
 
 def _add_loss_summaries(total_loss, batchSize):
     """Add summaries for losses in calusa_heatmap model.
-    
     Generates moving average for all losses and associated summaries for
     visualizing the performance of the network.
-    
     Args:
       total_loss: Total loss from loss().
     Returns:
@@ -55,7 +50,7 @@ def _l2_loss(pred, tval): # batchSize=Sne
     #l1_loss = tf.abs(tf.sub(logits, HAB), name="abs_loss")
     #l1_loss_mean = tf.reduce_mean(l1_loss, name='abs_loss_mean')
     #tf.add_to_collection('losses', l2_loss_mean)
-    
+
     l2_loss = tf.nn.l2_loss(tf.sub(pred, tval), name="l2_loss")
     tf.add_to_collection('losses', l2_loss)
 
@@ -64,19 +59,22 @@ def _l2_loss(pred, tval): # batchSize=Sne
 
     #mse = tf.reduce_mean(tf.square(logits - HAB), name="mse")
     #tf.add_to_collection('losses', mse)
-    
+
     # Calculate the average cross entropy loss across the batch.
     # labels = tf.cast(labels, tf.int64)
     # cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
     #     logits, labels, name='cross_entropy_per_example')
     # cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
     # tf.add_to_collection('losses', cross_entropy_mean)
-    
+
     # The total loss is defined as the cross entropy loss plus all of the weight
     # decay terms (L2 loss).
     return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
 
-def loss(pred, tval, **kwargs):
-    if (kwargs.get('lossFunction') == 'L2'):
+def loss(pred, tval, lossType):
+    """
+    Choose the proper loss function and call it.
+    """
+    if lossType == 'L2':
         return _l2_loss(pred, tval)

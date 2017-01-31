@@ -34,16 +34,23 @@ Summary of available functions:
 from __future__ import absolute_import
 from __future__ import division
 
+import re
+import glob
+
 import tensorflow as tf
 import numpy as np
 
-import optimizer_params
-import loss_base
+
+FLAGS = tf.app.flags.FLAGS
+# Basic model parameters.
+
+USE_FP_16 = False
 
 # If a model is trained with multiple GPUs, prefix all Op names with tower_name
 # to differentiate the operations. Note that this prefix is removed from the
 # names of the summaries when visualizing a model.
 TOWER_NAME = 'tower'
+
 
 def _activation_summary(x):
     """Helper to create summaries for activations.
@@ -108,9 +115,7 @@ def _variable_with_weight_decay(name, shape, initializer, wd, trainable=True):
         
     return var
 
-
-
-def batch_norm(tensorConv):
+def _batch_norm(tensorConv):
     # Calc batch mean for parallel module
     batchMean, batchVar = tf.nn.moments(tensorConv, axes=[0]) # moments along x,y
     scale = tf.Variable(tf.ones(tensorConv.get_shape()[-1]))
@@ -124,71 +129,9 @@ def batch_norm(tensorConv):
     return batchNorm
     
 
-def twin_correlation(name, prevLayerOut, prevLayerDims, d, s2):
-    USE_FP_16 = kwargs.get('usefp16')
-    dtype = tf.float16 if USE_FP_16 else tf.float32
-
-    D = (2*d)+1
-    numParallelModules = kwargs.get('numParallelModules') # 2
-    # Input from Twin network -> numParallelModules = 2
-    # Split tensor through last dimension into numParallelModules tensors
-    prevLayerOut = tf.split(3, numParallelModules, prevLayerOut)
-    prevLayerIndivDims = prevLayerDims / numParallelModules
-
-    # f1 is a list of size batchSize,x,y of [1,1,c,1] tensors  => last 1 is for the output size
-    prevLayerOut[0] = tf.unpack(prevLayerOut[0], axis=0) # batches seperate
-    for i in range(len(prevLayerOut[0])):
-        prevLayerOut[0][i] = tf.split(0, prevLayerOut[0][i].get_shape()[0], prevLayerOut[0][i]) # X seperate
-        for j in range(len(prevLayerOut[0][i])):
-            prevLayerOut[0][i][j] = tf.split(1, prevLayerOut[0][i][j].get_shape()[1], prevLayerOut[0][i][j]) # Y seperate
-            for k in range(len(prevLayerOut[0][i][j])):
-                prevLayerOut[0][i][j][k] = tf.reshape(prevLayerOut[0][i][j][k], [1, 1, int(prevLayerOut[0][i][j][k].get_shape()[2]), 1])
-                prevLayerOut[0][i][j][k].set_shape([1, 1, int(prevLayerOut[0][i][j][k].get_shape()[2]), 1])
-
-    # padd f2 with 20 zeros on each side
-    # output is batch x [1, x+2d, y+2d, c]
-    prevLayerOut[1] = tf.split(0, prevLayerOut[1].get_shape()[0], prevLayerOut[1]) # batches seperate
-    for i in range(len(prevLayerOut[1])):
-        prevLayerOut[1][i] = tf.pad(prevLayerOut[1][i], [[0,0],[d,d],[d,d],[0,0]], mode='CONSTANT', name=None)
-
-    # correlation
-    with tf.variable_scope(name):
-        with tf.variable_scope('corr1x1') as scope:
-            for batches in range(len(prevLayerOut[0])): # batches
-                for i in range(len(prevLayerOut[0][batches])): # X
-                    for j in range(len(prevLayerOut[0][batches][i])): # Y
-                        # kernel_shape = width, height, dims (input), dims (output) [1,1,c,1]
-                        f1kernel = prevLayerOut[0][batches][i][j]
-                        ##print(f1kernel.get_shape())
-                        # inputs of [1, x+2d, y+2d, c]
-                        # Select square subtensor centered at i,j with square size D=2*d+1 and stride 2 in each axis with complete channel data
-                        # if d=20, s2=2 => f2box = [1,21,21,1]
-                        f2box = tf.strided_slice(prevLayerOut[1][batches], [0, i, j], [1, i+D, j+D], [1, s2, s2])
-                        ##print(f2box.get_shape())
-                        # corrsingle is a [1,21,21,1]
-                        # reshape to [1,1,1,21*21] or [1,1,1,441]
-                        corrSingle = tf.reshape(tf.nn.conv2d(f2box, f1kernel, [1, 1, 1, 1], padding='SAME'), [1, 1, 1, D*D])
-                        # concat along height dimension
-                        if j == 0:
-                            corrBox = corrSingle
-                        else:
-                            corrBox = tf.concat(2, [corrBox, corrSingle])
-                    # concat along width dimension
-                    if i == 0:
-                        resultTensor = corrBox
-                    else:
-                        resultTensor = tf.concat(1, [resultTensor, corrBox])
-                # concat along batches
-                if batches == 0:
-                    resultBatch = resultTensor
-                else:
-                    resultBatch = tf.concat(0, [resultBatch, resultTensor])
-    #return resultTensor
-    return resultBatch, D*D
-
 
 def conv_fire_parallel_module(name, prevLayerOut, prevLayerDims, fireDimsSingleModule, wd=None, **kwargs):
-    """
+    """ 
     Input Args:
         name:               scope name
         prevLayerOut:       output tensor of previous layer
@@ -198,7 +141,7 @@ def conv_fire_parallel_module(name, prevLayerOut, prevLayerDims, fireDimsSingleM
     """
     USE_FP_16 = kwargs.get('usefp16')
     dtype = tf.float16 if USE_FP_16 else tf.float32
-
+    
     existingParams = kwargs.get('existingParams')
 
     numParallelModules = kwargs.get('numParallelModules') # 2
@@ -235,7 +178,7 @@ def conv_fire_parallel_module(name, prevLayerOut, prevLayerDims, fireDimsSingleM
                 
                 if kwargs.get('weightNorm'):
                     # calc weight norm
-                    conv = batch_norm(conv)
+                    conv = _batch_norm(conv)
                 
                 #if existingParams is not None and layerName in existingParams:
                 #    biases = tf.get_variable('biases',
@@ -255,7 +198,7 @@ def conv_fire_parallel_module(name, prevLayerOut, prevLayerDims, fireDimsSingleM
 
             _activation_summary(convRelu)
 
-    return convRelu, numParallelModules*fireDimsSingleModule['cnn3x3']
+        return convRelu, numParallelModules*fireDimsSingleModule['cnn3x3']
 
 def conv_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwargs):
     USE_FP_16 = kwargs.get('usefp16')
@@ -289,7 +232,7 @@ def conv_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwar
 
             if kwargs.get('weightNorm'):
                 # calc weight norm
-                conv = batch_norm(conv)
+                conv = _batch_norm(conv)
 
             #if existingParams is not None and layerName in existingParams:
             #    biases = tf.get_variable('biases',
@@ -327,7 +270,7 @@ def fc_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwargs
 
             if kwargs.get('weightNorm'):
                 # calc weight norm
-                fc = batch_norm(fc)
+                fc = _batch_norm(fc)
 
             #biases = tf.get_variable('biases', fireDims['fc'],
             #                         initializer=tf.constant_initializer(0.0), dtype=dtype)
@@ -359,7 +302,7 @@ def fc_regression_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **
 
             if kwargs.get('weightNorm'):
                 # calc weight norm
-                fc = batch_norm(fc)
+                fc = _batch_norm(fc)
 
             #biases = tf.get_variable('biases', fireDims['fc'],
             #                         initializer=tf.constant_initializer(0.0), dtype=dtype)
@@ -368,30 +311,205 @@ def fc_regression_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **
         
         return fc, fireDims['fc']
 
-def loss(pred, tval, lossType):
-    return loss_base.loss(pred, tval, lossType)
+def inference(images, **kwargs): #batchSize=None, phase='train', outLayer=[13,13], existingParams=[]
+    
+    modelShape = kwargs.get('modelShape') 
+    wd = None #0.0002
+    USE_FP_16 = kwargs.get('usefp16')
+    dtype = tf.float16 if USE_FP_16 else tf.float32
+    
+    existingParams = kwargs.get('existingParams')
+    
+    batchSize = kwargs.get('activeBatchSize', None)
+    
+    ############# CONV1_TWIN 3x3 conv, 2 input dims, 2 parallel modules, 64 output dims (filters)
+    fireOut, prevExpandDim = conv_fire_parallel_module('conv1', images, kwargs.get('imageChannels'),
+                                              {'cnn3x3': modelShape[0]},
+                                              wd, **kwargs)
+    # calc batch norm CONV1_TWIN
+    if kwargs.get('batchNorm'):
+        fireOut = _batch_norm(fireOut)
+    ############# CONV2_TWIN 3x3 conv, 64 input dims, 64 output dims (filters)
+    fireOut, prevExpandDim = conv_fire_parallel_module('conv2', fireOut, prevExpandDim,
+                                              {'cnn3x3': modelShape[1]},
+                                              wd, **kwargs)
+    # calc batch norm CONV2_TWIN
+    if kwargs.get('batchNorm'):
+        fireOut = _batch_norm(fireOut)
+    ###### Pooling1 2x2 wit stride 2
+    pool = tf.nn.max_pool(fireOut, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1],
+                          padding='SAME', name='maxpool1')
+    ############# CONV3_TWIN 3x3 conv, 64 input dims, 64 output dims (filters)
+    fireOut, prevExpandDim = conv_fire_parallel_module('conv3', pool, prevExpandDim,
+                                              {'cnn3x3': modelShape[2]},
+                                              wd, **kwargs)
+    # calc batch norm CONV3_TWIN
+    if kwargs.get('batchNorm'):
+        fireOut = _batch_norm(fireOut)
+    ############# CONV4_TWIN 3x3 conv, 64 input dims, 64 output dims (filters)
+    fireOut, prevExpandDim = conv_fire_parallel_module('conv4', fireOut, prevExpandDim,
+                                              {'cnn3x3': modelShape[3]},
+                                              wd, **kwargs)
+   # calc batch norm CONV4_TWIN
+    if kwargs.get('batchNorm'):
+        fireOut = _batch_norm(fireOut)
+    ###### Pooling2 2x2 wit stride 2
+    pool = tf.nn.max_pool(fireOut, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1],
+                          padding='SAME', name='maxpool2')
+    ############# CONV5 3x3 conv, 64 input dims, 64 output dims (filters)
+    fireOut, prevExpandDim = conv_fire_module('conv5', pool, prevExpandDim,
+                                              {'cnn3x3': modelShape[4]},
+                                              wd, **kwargs)
+    # calc batch norm CONV5
+    if kwargs.get('batchNorm'):
+        fireOut = _batch_norm(fireOut)
+    ############# CONV6 3x3 conv, 64 input dims, 64 output dims (filters)
+    fireOut, prevExpandDim = conv_fire_module('conv6', fireOut, prevExpandDim,
+                                              {'cnn3x3': modelShape[5]},
+                                              wd, **kwargs)
+    # calc batch norm CONV6
+    if kwargs.get('batchNorm'):
+        fireOut = _batch_norm(fireOut)
+    ###### Pooling2 2x2 wit stride 2
+    pool = tf.nn.max_pool(fireOut, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1],
+                          padding='SAME', name='maxpool3')
+    ############# CONV7 3x3 conv, 64 input dims, 64 output dims (filters)
+    fireOut, prevExpandDim = conv_fire_module('conv7', pool, prevExpandDim,
+                                              {'cnn3x3': modelShape[6]},
+                                              wd, **kwargs)
+    # calc batch norm CONV7
+    if kwargs.get('batchNorm'):
+        fireOut = _batch_norm(fireOut)
+    ############# CONV8 3x3 conv, 64 input dims, 64 output dims (filters)
+    fireOut, prevExpandDim = conv_fire_module('conv8', fireOut, prevExpandDim,
+                                              {'cnn3x3': modelShape[7]},
+                                              wd, **kwargs)
+    # calc batch norm CONV8
+    if kwargs.get('batchNorm'):
+        fireOut = _batch_norm(fireOut)
+    ###### DROPOUT after CONV8
+    with tf.name_scope("drop"):
+        keepProb = tf.constant(kwargs.get('dropOutKeepRate') if kwargs.get('phase')=='train' else 1.0, dtype=dtype)
+        fireOut = tf.nn.dropout(fireOut, keepProb, name="dropout")
+    ###### Prepare for fully connected layers
+    # Reshape firout - flatten 
+    prevExpandDim = (kwargs.get('imageSize')//(2*2*2))*(kwargs.get('imageSize')//(2*2*2))*prevExpandDim
+    fireOutFlat = tf.reshape(fireOut, [batchSize, -1])
+    
+    ############# FC1 layer with 1024 outputs
+    fireOut, prevExpandDim = fc_fire_module('fc1', fireOutFlat, prevExpandDim,
+                                            {'fc': modelShape[8]},
+                                            wd, **kwargs)
+    # calc batch norm FC1
+    if kwargs.get('batchNorm'):
+        fireOut = _batch_norm(fireOut)
+    ############# FC2 layer with 8 outputs
+    fireOut, prevExpandDim = fc_regression_module('fc2', fireOut, prevExpandDim,
+                                            {'fc': kwargs.get('outputSize')},
+                                            wd, **kwargs)
+
+    return fireOut
+
+def loss(pHAB, tHAB, **kwargs): # batchSize=Sne
+    """Add L2Loss to all the trainable variables.
+    
+    Add summary for "Loss" and "Loss/avg".
+    Args:
+      logits: Logits from inference().
+      labels: Labels from distorted_inputs or inputs(). 1-D tensor
+              of shape [batch_size, heatmap_size ]
+    
+    Returns:
+      Loss tensor of type float.
+    """
+    #if not batch_size:
+    #    batch_size = kwargs.get('train_batch_size')
+    
+    #l1_loss = tf.abs(tf.sub(logits, HAB), name="abs_loss")
+    #l1_loss_mean = tf.reduce_mean(l1_loss, name='abs_loss_mean')
+    #tf.add_to_collection('losses', l2_loss_mean)
+    
+    l2_loss = tf.nn.l2_loss(tf.sub(pHAB, tHAB), name="l2_loss")
+    tf.add_to_collection('losses', l2_loss)
+
+    #l2_loss_mean = tf.reduce_mean(l2_loss, name='l2_loss_mean')
+    #tf.add_to_collection('losses', l2_loss_mean)
+
+    #mse = tf.reduce_mean(tf.square(logits - HAB), name="mse")
+    #tf.add_to_collection('losses', mse)
+    
+    # Calculate the average cross entropy loss across the batch.
+#     labels = tf.cast(labels, tf.int64)
+#     cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
+#         logits, labels, name='cross_entropy_per_example')
+#     cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
+#     tf.add_to_collection('losses', cross_entropy_mean)
+    
+    # The total loss is defined as the cross entropy loss plus all of the weight
+    # decay terms (L2 loss).
+    return tf.add_n(tf.get_collection('losses'), name='total_loss')
+
+
+def _add_loss_summaries(total_loss, batchSize):
+    """Add summaries for losses in calusa_heatmap model.
+    
+    Generates moving average for all losses and associated summaries for
+    visualizing the performance of the network.
+    
+    Args:
+      total_loss: Total loss from loss().
+    Returns:
+      loss_averages_op: op for generating moving averages of losses.
+    """
+    # Compute the moving average of all individual losses and the total loss.
+    loss_averages = tf.train.ExponentialMovingAverage(0.9, name='avg')
+    losses = tf.get_collection('losses')
+    loss_averages_op = loss_averages.apply(losses + [total_loss])
+
+    # Individual average loss
+    lossPixelIndividual = tf.sqrt(tf.mul(total_loss, 2/(batchSize*8)))
+    tf.summary.scalar('Average_Pixel_Error', lossPixelIndividual)
+
+    # Attach a scalar summary to all individual losses and the total loss; do the
+    # same for the averaged version of the losses.
+    for l in losses + [total_loss]:
+        # Name each loss as '(raw)' and name the moving average version of the loss
+        # as the original loss name.
+        tf.summary.scalar(l.op.name + '_raw', l)
+        tf.summary.scalar(l.op.name, loss_averages.average(l))
+
+    return loss_averages_op
 
 def train(loss, globalStep, **kwargs):
-    if kwargs.get('optimizer') == 'MomentumOptimizer':
-        optimizerParams = optimizer_params.get_momentum_optimizer_params(kwargs)
-    if kwargs.get('optimizer') == 'AdamOptimizer':
-        optimizerParams = optimizer_params.get_adam_optimizer_params(kwargs)
-    if kwargs.get('optimizer') == 'GradientDescentOptimizer':
-        optimizerParams = optimizer_params.get_gradient_descent_optimizer_params(kwargs)
+    ##############################
+    # Variables that affect learning rate.
+    numExamplesPerEpochForTrain = kwargs.get('numExamplesPerEpoch') #56016 #56658   # <--------------?????
+    #numBatchesPerEpoch = numExamplesPerEpochForTrain / kwargs.get('activeBatchSize')
+    print("Using %d example for phase %s" % (numExamplesPerEpochForTrain, kwargs.get('phase'))) # <--------------?????
 
+    # 0.005 for [0,30000] -> 0.0005 for [30001,60000], 0.00005 for [60001, 90000]
+    # [30000, 60000]
+    boundaries = [kwargs.get('numEpochsPerDecay'),
+                  2*kwargs.get('numEpochsPerDecay')]
+    #[0.005, 0.0005, 0.00005]
+    values = [kwargs.get('initialLearningRate'), 
+              kwargs.get('initialLearningRate')*kwargs.get('learningRateDecayFactor'),
+              kwargs.get('initialLearningRate')*kwargs.get('learningRateDecayFactor')*kwargs.get('learningRateDecayFactor')]
+    learningRate = tf.train.piecewise_constant(globalStep, boundaries, values)
+    tf.summary.scalar('learning_rate', learningRate)
+    momentum = kwargs.get('momentum')
+        
     # Generate moving averages of all losses and associated summaries.
-    lossAveragesOp = loss_base._add_loss_summaries(loss, kwargs.get('activeBatchSize', None))
+    lossAveragesOp = _add_loss_summaries(loss, kwargs.get('activeBatchSize', None))
     
     # Compute gradients.
     tvars = tf.trainable_variables()
     with tf.control_dependencies([lossAveragesOp]):
-        if kwargs.get('optimizer') == 'AdamOptimizer':
-            optim = tf.train.AdamOptimizer(learning_rate=optimizerParams['learningRate'], epsilon=optimizerParams['epsilon'])
-        if kwargs.get('optimizer') == 'MomentumOptimizer':
-            optim = tf.train.MomentumOptimizer(learning_rate=optimizerParams['learningRate'], momentum=optimizerParams['momentum'])
-        if kwargs.get('optimizer') == 'GradientDescentOptimizer':
-            optim = tf.train.GradientDescentOptimizer(learning_rate=optimizerParams['learningRate'])
-
+        #optim = tf.train.AdamOptimizer(learning_rate=learningRate, epsilon=0.1)
+        optim = tf.train.MomentumOptimizer(learning_rate=learningRate, momentum=momentum)
+        #optim = tf.train.GradientDescentOptimizer(learning_rate=learningRate)
+        #gradsNvars = optim.compute_gradients(loss, tvars)
+        #gradsNvars, norm = tf.clip_by_global_norm(gradsNvars, kwargs.get('clipNorm')
         grads, norm = tf.clip_by_global_norm(tf.gradients(loss, tvars), kwargs.get('clipNorm'))
 
     # Apply gradients.
@@ -415,8 +533,13 @@ def train(loss, globalStep, **kwargs):
     return opTrain
 
 def test(loss, globalStep, **kwargs):
+    ##############################
+    # Variables that affect learning rate.
+    numExamplesPerEpochForTest = kwargs.get('numExamplesPerEpoch') #56016 #56658   # <--------------?????
+    print("Using %d example for phase %s" % (numExamplesPerEpochForTest, kwargs.get('phase'))) # <--------------?????
+    
     # Generate moving averages of all losses and associated summaries.
-    lossAveragesOp = loss_base._add_loss_summaries(loss, kwargs.get('activeBatchSize', None))
+    lossAveragesOp = _add_loss_summaries(loss, kwargs.get('activeBatchSize', None))
     
     with tf.control_dependencies([]):
         opTest = tf.no_op(name='test')
