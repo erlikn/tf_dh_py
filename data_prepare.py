@@ -141,13 +141,13 @@ def generate_random_perturbations(datasetType, img, filenameWrite, num, tfRecFol
         imgTempOrig = img[pRow:pRow+squareSize, pCol:pCol+squareSize]
         # p & 0 is top left    - 1 is top right
         # 2     is bottom left - 3 is bottom right
-        pOrig = np.array([[pRow, pRow, pRow+squareSize, pRow+squareSize], 
+        pOrig = np.array([[pRow, pRow, pRow+squareSize, pRow+squareSize],
                           [pCol, pCol+squareSize, pCol, pCol+squareSize]], np.float32)
         # generate random perturbations (H^AB)
-        rndListRowPert = np.asarray(random.sample(range(-32,32), 4))
-        rndListColPert = np.asarray(random.sample(range(-32,32), 4))   
+        rndListRowPert = np.asarray(random.sample(range(-32, 32), 4))
+        rndListColPert = np.asarray(random.sample(range(-32, 32), 4))
         H_AB = np.asarray([rndListRowPert, rndListColPert], np.float32)
-        # 
+        #
         pPert = np.asarray(pOrig+H_AB)
         # get transformation matrix and transform the image to new space
         Hmatrix = cv2.getPerspectiveTransform(np.transpose(pOrig), np.transpose(pPert))
@@ -165,8 +165,10 @@ def generate_random_perturbations(datasetType, img, filenameWrite, num, tfRecFol
         perturb_writer(filenameWrite, i,
                        imgTempOrig, imgTempPert, H_AB, pOrig,
                        tfRecFolder)
-        mu = np.average(np.linalg.norm(H_AB, axis=0))
-        var = np.var(np.linalg.norm(H_AB, axis=0))
+        #mu = np.average(np.linalg.norm(H_AB, axis=0))
+        #var = np.var(np.linalg.norm(H_AB, axis=0))
+        mu = np.average(H_AB, axis=1)
+        var = np.sqrt(np.var(H_AB, axis=1))
     return mu, var
 
 def prepare_dataset(datasetType, readFolder, tfRecFolder):
@@ -175,8 +177,8 @@ def prepare_dataset(datasetType, readFolder, tfRecFolder):
     #
     i = 0
     totalCount = 0
-    tMu = 0.0
-    tVar = 0.0
+    tMu = np.asarray([0.0, 0.0])
+    tVar = np.asarray([0.0, 0.0])
     for filename in filenames:
         if "train" in datasetType:
             if i < 33302: # total of 500000
@@ -193,12 +195,13 @@ def prepare_dataset(datasetType, readFolder, tfRecFolder):
             totalCount = totalCount + (num)
         else:
             print("Not a grayscale")
-        if math.floor((i*250)/len(filenames)) != math.floor(((i-1)*250)/len(filenames)):
+        if math.floor((i*50)/len(filenames)) != math.floor(((i-1)*50)/len(filenames)):
             print(str(math.floor((i*100)/len(filenames)))+'%  '+str(i))
-            print('Perturbation statistics: Mu = %.3f , Var = %.3f , total files = %d' % (tMu/i, tVar/i, totalCount))
+            print('Perturbation Statistics: MuXY = %.1f, %.1f , VarXY = %.1f, %.1f , Files = %d' % (mu[0], mu[1], var[0], var[1], totalCount))
         i = i+1
     print('100%  Done')
-    print('Perturbation statistics: Mu = %.3f , Var = %.3f , total files = %d' % (tMu/i, tVar/i, totalCount))
+    print('Perturbation Statistics: Average MuXY = %.1f, %.1f , VarXY = %.1f, %.1f , Files = %d' % (tMu[0]/i, tMu[1]/i, tVar[0]/i, tVar[1]/i, totalCount))
+    print('Perturbation Statistics: Average MuXY = %.1f       , VarXY = %.1f ' % (np.linalg.norm(tMu/i), np.linalg.norm(tVar/i)))
 
 
 def divide_train_test(readFolder, trainFolder, testFolder):
