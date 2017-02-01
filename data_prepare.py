@@ -165,14 +165,18 @@ def generate_random_perturbations(datasetType, img, filenameWrite, num, tfRecFol
         perturb_writer(filenameWrite, i,
                        imgTempOrig, imgTempPert, H_AB, pOrig,
                        tfRecFolder)
-
-    return
+        mu = np.average(np.linalg.norm(H_AB, axis=0))
+        var = np.var(np.linalg.norm(H_AB, axis=0))
+    return mu, var
 
 def prepare_dataset(datasetType, readFolder, tfRecFolder):
     filenames = [f for f in listdir(readFolder) if isfile(join(readFolder, f))]
     filenames.sort()
     #
     i = 0
+    totalCount = 0
+    tMu = 0.0
+    tVar = 0.0
     for filename in filenames:
         if "train" in datasetType:
             if i < 33302: # total of 500000
@@ -183,13 +187,18 @@ def prepare_dataset(datasetType, readFolder, tfRecFolder):
             num = NUM_OF_TEST_PERTURBED_IMAGES
         img = cv2.imread(readFolder+filename, 0)
         if img.ndim == 2:
-            generate_random_perturbations(datasetType, img, filename, num, tfRecFolder)
+            mu, var = generate_random_perturbations(datasetType, img, filename, num, tfRecFolder)
+            tMu = tMu + mu
+            tVar = tVar + var
+            totalCount = totalCount + (num)
         else:
             print("Not a grayscale")
-        if math.floor((i*100)/len(filenames)) != math.floor(((i-1)*100)/len(filenames)):
+        if math.floor((i*250)/len(filenames)) != math.floor(((i-1)*250)/len(filenames)):
             print(str(math.floor((i*100)/len(filenames)))+'%  '+str(i))
+            print('Perturbation statistics: Mu = %.3f , Var = %.3f , total files = %d' % (tMu/i, tVar/i, totalCount))
         i = i+1
     print('100%  Done')
+    print('Perturbation statistics: Mu = %.3f , Var = %.3f , total files = %d' % (tMu/i, tVar/i, totalCount))
 
 
 def divide_train_test(readFolder, trainFolder, testFolder):
