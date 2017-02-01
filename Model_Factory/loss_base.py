@@ -72,9 +72,9 @@ def _l2_loss(pred, tval): # batchSize=Sne
     return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
 
-def loss(pred, tval, lossType):
+def loss(pred, tval, lossFunction):
     """
     Choose the proper loss function and call it.
     """
-    if lossType == 'L2':
+    if lossFunction == 'L2':
         return _l2_loss(pred, tval)

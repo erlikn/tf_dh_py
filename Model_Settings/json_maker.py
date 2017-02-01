@@ -387,3 +387,35 @@ if reCompileJSON:
     data['weightNorm'] = True
     write_json_file('170126_SIN_BW.json', data)
 ##############
+
+
+
+
+
+####################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
+
+# Twin Correlation Matching Common Parameters
+trainLogDirBase = '../Data/128_logs/tfdh_twincorr_logs/train_logs/'
+testLogDirBase = '../Data/128_logs/tfdh_twincorr_logs/test_logs/'
+
+data['modelName'] = 'twin_cnn_4pCorr4l2f'
+
+##############
+if reCompileJSON:
+    data['trainLogDir'] = trainLogDirBase+'170131_TCOR_B'
+    data['testLogDir'] = testLogDirBase+'170126_TCOR_B'
+    data['trainMaxSteps'] = 90000
+    data['numEpochsPerDecay'] = 30000.0
+    data['trainBatchSize'] = 20
+    data['testBatchSize'] = 20
+    data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+    data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+    data['batchNorm'] = True
+    data['weightNorm'] = False
+    write_json_file('170131_TCOR_B.json', data)

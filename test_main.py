@@ -29,7 +29,7 @@ import tensorflow as tf
 import data_input
 
 
-with open('Model_Settings/170129_TWN_MOM_B_32.json') as data_file:
+with open('Model_Settings/170130_TWN_MOM_B_8.json') as data_file:
     modelParams = json.load(data_file)
 
 #### Override Model Parameters for Batch Normalization and Weight Normalization

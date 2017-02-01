@@ -28,7 +28,7 @@ import tensorflow as tf
 #import tensorflow.python.debug as tf_debug
 import data_input
 
-with open('Model_Settings/170130_TWN_MOM_B_16.json') as data_file:
+with open('Model_Settings/170131_TCOR_B.json') as data_file:
     modelParams = json.load(data_file)
 
 # import corresponding model name as model_cnn

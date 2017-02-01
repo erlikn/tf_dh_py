@@ -34,11 +34,13 @@ Summary of available functions:
 from __future__ import absolute_import
 from __future__ import division
 
+import re
+
 import tensorflow as tf
 import numpy as np
 
-import optimizer_params
-import loss_base
+import Model_Factory.optimizer_params as optimizer_params
+import Model_Factory.loss_base as loss_base
 
 # If a model is trained with multiple GPUs, prefix all Op names with tower_name
 # to differentiate the operations. Note that this prefix is removed from the
@@ -63,7 +65,7 @@ def _activation_summary(x):
     tf.summary.scalar(tensor_name + '/sparsity', tf.nn.zero_fraction(x))
 
 
-def _variable_on_cpu(name, shape, initializer):
+def _variable_on_cpu(name, shape, initializer, dtype):
     """Helper to create a Variable stored on CPU memory.
     
     Args:
@@ -75,12 +77,11 @@ def _variable_on_cpu(name, shape, initializer):
       Variable Tensor
     """
     with tf.device('/cpu:0'):
-        dtype = tf.float16 if USE_FP_16 else tf.float32
         var = tf.get_variable(name, shape, initializer=initializer, dtype=dtype)
     return var
 
 
-def _variable_with_weight_decay(name, shape, initializer, wd, trainable=True):
+def _variable_with_weight_decay(name, shape, initializer, dtype, wd, trainable=True):
     """Helper to create an initialized Variable with weight decay.
     
     Note that the Variable is initialized with a truncated normal distribution.
@@ -96,7 +97,6 @@ def _variable_with_weight_decay(name, shape, initializer, wd, trainable=True):
     Returns:
       Variable Tensor
     """     
-    dtype = tf.float16 if USE_FP_16 else tf.float32
     # tf.truncated_normal_initializer(stddev=stddev, dtype=dtype)
     if isinstance(initializer, np.ndarray):
         var = tf.get_variable(name, initializer=initializer, dtype=dtype, trainable=trainable)
@@ -110,13 +110,13 @@ def _variable_with_weight_decay(name, shape, initializer, wd, trainable=True):
 
 
 
-def batch_norm(tensorConv):
+def batch_norm(tensorConv, dtype):
     # Calc batch mean for parallel module
     batchMean, batchVar = tf.nn.moments(tensorConv, axes=[0]) # moments along x,y
     scale = tf.Variable(tf.ones(tensorConv.get_shape()[-1]))
     beta = tf.Variable(tf.zeros(tensorConv.get_shape()[-1]))
     epsilon = 1e-3
-    if USE_FP_16:
+    if dtype is tf.float16:
         scale = tf.cast(scale, tf.float16)
         beta = tf.cast(beta, tf.float16)
         epsilon = tf.cast(epsilon, tf.float16)
@@ -124,9 +124,8 @@ def batch_norm(tensorConv):
     return batchNorm
     
 
-def twin_correlation(name, prevLayerOut, prevLayerDims, d, s2):
-    USE_FP_16 = kwargs.get('usefp16')
-    dtype = tf.float16 if USE_FP_16 else tf.float32
+def twin_correlation(name, prevLayerOut, prevLayerDims, d, s2, **kwargs):
+    dtype = tf.float16 if kwargs.get('usefp16') else tf.float32
 
     D = (2*d)+1
     numParallelModules = kwargs.get('numParallelModules') # 2
@@ -167,7 +166,7 @@ def twin_correlation(name, prevLayerOut, prevLayerDims, d, s2):
                         ##print(f2box.get_shape())
                         # corrsingle is a [1,21,21,1]
                         # reshape to [1,1,1,21*21] or [1,1,1,441]
-                        corrSingle = tf.reshape(tf.nn.conv2d(f2box, f1kernel, [1, 1, 1, 1], padding='SAME'), [1, 1, 1, D*D])
+                        corrSingle = tf.reshape(tf.nn.conv2d(f2box, f1kernel, [1, 1, 1, 1], padding='SAME'), [1, 1, 1, (d+1)*(d+1)])
                         # concat along height dimension
                         if j == 0:
                             corrBox = corrSingle
@@ -216,7 +215,8 @@ def conv_fire_parallel_module(name, prevLayerOut, prevLayerDims, fireDimsSingleM
             #                                                                                         layerName in existingParams) else
             #                                                    (tf.contrib.layers.xavier_initializer_conv2d() if kwargs.get('phase')=='train' else
             #                                                     tf.constant_initializer(0.0, dtype=dtype)),
-            #                                     wd=wd,
+            #                                     dtype=dtype,
+            # wd=wd,
             #                                     trainable=kwargs.get('tuneExistingWeights') if (existingParams is not None and 
             #                                                                               layerName in existingParams) else True)
             stddev = np.sqrt(2/np.prod(prevLayerOut[0].get_shape().as_list()[1:]))
@@ -226,6 +226,7 @@ def conv_fire_parallel_module(name, prevLayerOut, prevLayerDims, fireDimsSingleM
                                                                                                      layerName in existingParams) else
                                                                 (tf.random_normal_initializer(stddev=stddev) if kwargs.get('phase')=='train' else
                                                                  tf.constant_initializer(0.0, dtype=dtype)),
+                                                 dtype=dtype,
                                                  wd=wd,
                                                  trainable=kwargs.get('tuneExistingWeights') if (existingParams is not None and 
                                                                                            layerName in existingParams) else True)
@@ -235,7 +236,7 @@ def conv_fire_parallel_module(name, prevLayerOut, prevLayerDims, fireDimsSingleM
                 
                 if kwargs.get('weightNorm'):
                     # calc weight norm
-                    conv = batch_norm(conv)
+                    conv = batch_norm(conv, dtype)
                 
                 #if existingParams is not None and layerName in existingParams:
                 #    biases = tf.get_variable('biases',
@@ -272,7 +273,8 @@ def conv_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwar
             #                                                                                         layerName in existingParams) else
             #                                                    (tf.contrib.layers.xavier_initializer_conv2d() if kwargs.get('phase')=='train' else
             #                                                     tf.constant_initializer(0.0, dtype=dtype)),
-            #                                     wd=wd,
+            #                                     dtype=dtype,
+            # wd=wd,
             #                                     trainable=kwargs.get('tuneExistingWeights') if (existingParams is not None and 
             #                                                                               layerName in existingParams) else True)
             stddev = np.sqrt(2/np.prod(prevLayerOut.get_shape().as_list()[1:]))
@@ -282,6 +284,7 @@ def conv_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwar
                                                                                                      layerName in existingParams) else
                                                                 (tf.random_normal_initializer(stddev=stddev) if kwargs.get('phase')=='train' else
                                                                  tf.constant_initializer(0.0, dtype=dtype)),
+                                                 dtype=dtype,
                                                  wd=wd,
                                                  trainable=kwargs.get('tuneExistingWeights') if (existingParams is not None and 
                                                                                            layerName in existingParams) else True)
@@ -289,7 +292,7 @@ def conv_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwar
 
             if kwargs.get('weightNorm'):
                 # calc weight norm
-                conv = batch_norm(conv)
+                conv = batch_norm(conv, dtype)
 
             #if existingParams is not None and layerName in existingParams:
             #    biases = tf.get_variable('biases',
@@ -318,6 +321,7 @@ def fc_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwargs
                                                     shape=[prevLayerDim, fireDims['fc']],
                                                     initializer=(tf.random_normal_initializer(stddev=stddev) if kwargs.get('phase')=='train'
                                                                    else tf.constant_initializer(0.0, dtype=dtype)),
+                                                    dtype=dtype,
                                                     wd=wd,
                                                     trainable=kwargs.get('tuneExistingWeights') if (existingParams is not None and 
                                                                                            layerName in existingParams) else True)
@@ -327,7 +331,7 @@ def fc_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwargs
 
             if kwargs.get('weightNorm'):
                 # calc weight norm
-                fc = batch_norm(fc)
+                fc = batch_norm(fc, dtype)
 
             #biases = tf.get_variable('biases', fireDims['fc'],
             #                         initializer=tf.constant_initializer(0.0), dtype=dtype)
@@ -350,6 +354,7 @@ def fc_regression_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **
                                                     shape=[prevLayerDim, fireDims['fc']],
                                                     initializer=(tf.random_normal_initializer(stddev=stddev) if kwargs.get('phase')=='train'
                                                                    else tf.constant_initializer(0.0, dtype=dtype)),
+                                                    dtype=dtype,
                                                     wd=wd,
                                                     trainable=kwargs.get('tuneExistingWeights') if (existingParams is not None and 
                                                                                            layerName in existingParams) else True)
@@ -359,7 +364,7 @@ def fc_regression_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **
 
             if kwargs.get('weightNorm'):
                 # calc weight norm
-                fc = batch_norm(fc)
+                fc = batch_norm(fc, dtype)
 
             #biases = tf.get_variable('biases', fireDims['fc'],
             #                         initializer=tf.constant_initializer(0.0), dtype=dtype)
