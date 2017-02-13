@@ -13,6 +13,9 @@ import tensorflow as tf
 def _int64_feature(value):
     return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
+def _int64_nparray(value):
+    return tf.train.Feature(int64_list=tf.train.Int64List(value=value))
+
 def _bytes_feature(value):
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
@@ -73,7 +76,7 @@ def parse_example_proto(exampleSerialized, **kwargs):
     """
     
     featureMap ={
-        'filename': tf.FixedLenFeature([], dtype=tf.string, default_value=''),
+        'fileID': tf.FixedLenFeature([2], dtype=tf.int64),
         'height': tf.FixedLenFeature([1], dtype=tf.int64),
         'width': tf.FixedLenFeature([1], dtype=tf.int64),
         'depth': tf.FixedLenFeature([1], dtype=tf.int64),
@@ -90,13 +93,12 @@ def parse_example_proto(exampleSerialized, **kwargs):
 
     return image, HAB, filename
 
-def tfrecord_writer(imgPatchOrig, imgPatchPert, HAB, tfRecordFolder, tfFileName):
+def tfrecord_writer(imgPatchOrig, imgPatchPert, HAB, tfRecordFolder, tfFileName, fileID):
     """Converts a dataset to tfrecords."""
     #images = data_set.images
     #labels = data_set.labels
     #num_examples = data_set.num_examples
     tfRecordPath = tfRecordFolder + tfFileName
-    filename = np.asarray(tfFileName).tostring()
 
     rows = imgPatchOrig.shape[0]
     cols = imgPatchOrig.shape[1]
@@ -118,7 +120,7 @@ def tfrecord_writer(imgPatchOrig, imgPatchPert, HAB, tfRecordFolder, tfFileName)
     #print('Writing', filename)
     writer = tf.python_io.TFRecordWriter(tfRecordPath)
     example = tf.train.Example(features=tf.train.Features(feature={
-        'filename': _bytes_feature(filename),
+        'fileID': _int64_nparray(fileID),
         'height': _int64_feature(rows),
         'width': _int64_feature(cols),
         'depth': _int64_feature(depth),

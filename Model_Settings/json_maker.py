@@ -527,5 +527,5 @@ def recompile_json_files():
     write_twin()
     write_twin_correlation()
     write_iterative()
-    write_twin_residual()
+    write_residual()
     print("JSON files updated")

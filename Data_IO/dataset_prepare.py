@@ -32,7 +32,7 @@ def image_process_subMean_divStd_n1p1(img):
     out = (2*((out-out.min())/(out.max()-out.min())))-1
     return out
 
-def perturb_writer( filenameWrite, idx,
+def perturb_writer( ID, idx,
                     imgPatchOrig, imgPatchPert, HAB, pOrig,
                     tfRecFolder):
     ##### original patch
@@ -58,8 +58,9 @@ def perturb_writer( filenameWrite, idx,
     #    else:
     #        writer.writerow(pOrig)
     # Tensorflow record
-    filename = filenameWrite.replace(".jpg", "_"+ str(idx) +".tfrecords")
-    tfrecord_io.tfrecord_writer(imgPatchOrig, imgPatchPert, HAB, tfRecFolder, filename)
+    filename = str(ID) + "_" + str(idx) +".tfrecords")
+    fileID = np.asarray([ID, idx])
+    tfrecord_io.tfrecord_writer(imgPatchOrig, imgPatchPert, HAB, tfRecFolder, filename, fileID)
     
     #imgOp = image_process_subMean_divStd(imgPatchOrig)
     #imgPp = image_process_subMean_divStd(imgPatchPert)
@@ -72,7 +73,7 @@ def perturb_writer( filenameWrite, idx,
 
     return
 
-def generate_random_perturbations(datasetType, img, filenameWrite, num, tfRecFolder):
+def generate_random_perturbations(datasetType, img, ID, num, tfRecFolder):
     if "train" in datasetType:
         # if 320x240 => 128x128 w thrPerturbation=32
         squareSize=128
@@ -112,7 +113,7 @@ def generate_random_perturbations(datasetType, img, filenameWrite, num, tfRecFol
             imgTempOrig = cv2.resize(imgTempOrig, (128,128))
             imgTempPert = cv2.resize(imgTempPert, (128,128))
             H_AB = H_AB/2
-        perturb_writer(filenameWrite, i,
+        perturb_writer(ID, i,
                        imgTempOrig, imgTempPert, H_AB, pOrig,
                        tfRecFolder)
         #mu = np.average(np.linalg.norm(H_AB, axis=0))
@@ -125,13 +126,13 @@ def prepare_dataset(datasetType, readFolder, tfRecFolder):
     filenames = [f for f in listdir(readFolder) if isfile(join(readFolder, f))]
     filenames.sort()
     #
-    i = 0
+    id = 0
     totalCount = 0
     tMu = np.asarray([0.0, 0.0])
     tVar = np.asarray([0.0, 0.0])
     for filename in filenames:
         if "train" in datasetType:
-            if i < 33302: # total of 500000
+            if id < 33302: # total of 500000
                 num = NUM_OF_TRAIN_PERTURBED_IMAGES + 1
             else:
                 num = NUM_OF_TRAIN_PERTURBED_IMAGES
@@ -139,7 +140,7 @@ def prepare_dataset(datasetType, readFolder, tfRecFolder):
             num = NUM_OF_TEST_PERTURBED_IMAGES
         img = cv2.imread(readFolder+filename, 0)
         if img.ndim == 2:
-            mu, var = generate_random_perturbations(datasetType, img, filename, num, tfRecFolder)
+            mu, var = generate_random_perturbations(datasetType, img, id, num, tfRecFolder)
             tMu = tMu + mu
             tVar = tVar + var
             totalCount = totalCount + (num)
@@ -148,7 +149,7 @@ def prepare_dataset(datasetType, readFolder, tfRecFolder):
         if math.floor((i*50)/len(filenames)) != math.floor(((i-1)*50)/len(filenames)):
             print(str(math.floor((i*100)/len(filenames)))+'%  '+str(i))
             print('Perturbation Statistics: MuXY = %.1f, %.1f , VarXY = %.1f, %.1f , Files = %d' % (mu[0], mu[1], var[0], var[1], totalCount))
-        i = i+1
+        id = id+1
     print('100%  Done')
     print('Perturbation Statistics: Average MuXY = %.1f, %.1f , VarXY = %.1f, %.1f , Files = %d' % (tMu[0]/i, tMu[1]/i, tVar[0]/i, tVar[1]/i, totalCount))
     print('Perturbation Statistics: Average MuXY = %.1f       , VarXY = %.1f ' % (np.linalg.norm(tMu/i), np.linalg.norm(tVar/i)))
