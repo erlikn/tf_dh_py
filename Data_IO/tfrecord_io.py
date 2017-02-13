@@ -85,13 +85,13 @@ def parse_example_proto(exampleSerialized, **kwargs):
 
     features = tf.parse_single_example(exampleSerialized, featureMap)
 
-    filename = _decode_byte_string(features['filename'])
+    fileID = features['fileID']
     image = _decode_byte_image(features['image'], kwargs.get('imageHeight'), kwargs.get('imageWidth'), kwargs.get('imageChannels'))
     HAB = features['HAB']
 
     #validate_for_nan()
 
-    return image, HAB, filename
+    return image, HAB, fileID
 
 def tfrecord_writer(imgPatchOrig, imgPatchPert, HAB, tfRecordFolder, tfFileName, fileID):
     """Converts a dataset to tfrecords."""

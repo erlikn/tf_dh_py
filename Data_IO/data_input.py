@@ -223,11 +223,11 @@ def fetch_inputs(numPreprocessThreads=None, numReaders=1, **kwargs):
         imagesHomographiesOrigsqrs = []
         for _ in range(numPreprocessThreads):
             # Parse a serialized Example proto to extract the image and metadata.
-            imageBuffer, HAB, tfrecFilename = tfrecord_io.parse_example_proto(exampleSerialized, **kwargs)
+            imageBuffer, HAB, tfrecFileIDs = tfrecord_io.parse_example_proto(exampleSerialized, **kwargs)
             image = image_preprocessing(imageBuffer, **kwargs) # normalized between [-1,1]
-            imagesHomographiesOrigsqrs.append([image, HAB, tfrecFilename])
+            imagesHomographiesOrigsqrs.append([image, HAB, tfrecFileIDs])
 
-        batchImage, batchHAB, batchTFrecFilename = tf.train.batch_join(imagesHomographiesOrigsqrs,
+        batchImage, batchHAB, batchTFrecFileIDs = tf.train.batch_join(imagesHomographiesOrigsqrs,
                                                         batch_size=kwargs.get('activeBatchSize'),
                                                         capacity=2 * numPreprocessThreads * batchSize)
 
@@ -241,7 +241,7 @@ def fetch_inputs(numPreprocessThreads=None, numReaders=1, **kwargs):
         tf.summary.image('imagesOrig', image0)
         tf.summary.image('imagesPert', image1)
 
-        return batchImage, batchHAB, batchTFrecFilename
+        return batchImage, batchHAB, batchTFrecFileIDs
 
         # Read examples from files in the filename queue.
         #read_input = read_calusa_heatmap(filenameQueue)
@@ -261,10 +261,10 @@ def inputs(**kwargs):
       ValueError: If no dataDir
     """     
     with tf.device('/cpu:0'):
-        batchImage, batchHAB, batchTFrecFilename = fetch_inputs(**kwargs)
+        batchImage, batchHAB, tfrecFileID = fetch_inputs(**kwargs)
         
         if kwargs.get('usefp16'):
             batchImage = tf.cast(batchImage, tf.float16)
             batchHAB = tf.cast(batchHAB, tf.float16)
 
-    return batchImage, batchHAB, batchTFrecFilename
+    return batchImage, batchHAB, tfrecFileID
