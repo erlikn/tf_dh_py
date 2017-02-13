@@ -13,63 +13,13 @@ import matplotlib.pyplot as plt
 import csv
 import tensorflow as tf
 
+import Data_IO.tfrecord_io as tfrecord_io
+
 # Global Variables
 NUM_OF_TEST_PERTURBED_IMAGES = 5
 NUM_OF_TRAIN_PERTURBED_IMAGES = 7
 
 
-
-def _int64_feature(value):
-    return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
-
-def _bytes_feature(value):
-    return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
-
-# to get HAB and pOrig
-def _float_nparray(value):
-    return tf.train.Feature(float_list=tf.train.FloatList(value=value))
-
-def tfrecord_writer(imgPatchOrig, imgPatchPert, HAB, pOrig, tfRecordFolder, tfFileName):
-    """Converts a dataset to tfrecords."""
-    #images = data_set.images
-    #labels = data_set.labels
-    #num_examples = data_set.num_examples
-    tfRecordPath = tfRecordFolder + tfFileName;
-    filename = np.asarray(tfFileName).tostring()
-
-    rows = imgPatchOrig.shape[0]
-    cols = imgPatchOrig.shape[1]
-    depth = 2
-    #OLD
-    stackedImage = np.stack((imgPatchOrig, imgPatchPert), axis=2) #3D array (hieght, width, channels)
-    flatImage = stackedImage.reshape(rows*cols*depth)
-    #Stack Images
-    #stackedImage = np.array([imgPatchOrig.reshape(imgPatchOrig.shape[0]*imgPatchOrig.shape[1]),
-    #                imgPatchPert.reshape(imgPatchPert.shape[0]*imgPatchPert.shape[1])])
-    #flatImage = stackedImage.reshape(stackedImage.shape[0]*stackedImage.shape[1])
-    
-    flatImageList = flatImage.tostring()
-
-    pOrigRow = np.array([pOrig[0][0], pOrig[0][1], pOrig[0][2], pOrig[0][3],
-                         pOrig[1][0], pOrig[1][1], pOrig[1][2], pOrig[1][3]], np.float32)
-    pOrigList = pOrigRow.tolist()
-    HABRow = np.asarray([HAB[0][0], HAB[0][1], HAB[0][2], HAB[0][3],
-                         HAB[1][0], HAB[1][1], HAB[1][2], HAB[1][3]], np.float32)
-    HABList = HABRow.tolist()
-    
-    #print('Writing', filename)
-    writer = tf.python_io.TFRecordWriter(tfRecordPath)
-    example = tf.train.Example(features=tf.train.Features(feature={
-        'filename': _bytes_feature(filename),
-        'height': _int64_feature(rows),
-        'width': _int64_feature(cols),
-        'depth': _int64_feature(depth),
-        'pOrig': _float_nparray(pOrigList),
-        'HAB': _float_nparray(HABList), # 2D np array
-        'image': _bytes_feature(flatImageList)
-        }))
-    writer.write(example.SerializeToString())
-    writer.close()
 
 def image_process_subMean_divStd(img):
     out = img - np.mean(img)
@@ -109,7 +59,7 @@ def perturb_writer( filenameWrite, idx,
     #        writer.writerow(pOrig)
     # Tensorflow record
     filename = filenameWrite.replace(".jpg", "_"+ str(idx) +".tfrecords")
-    tfrecord_writer(imgPatchOrig, imgPatchPert, HAB, pOrig, tfRecFolder, filename)
+    tfrecord_io.tfrecord_writer(imgPatchOrig, imgPatchPert, HAB, tfRecFolder, filename)
     
     #imgOp = image_process_subMean_divStd(imgPatchOrig)
     #imgPp = image_process_subMean_divStd(imgPatchPert)

@@ -13,6 +13,8 @@ import json
 import tensorflow as tf
 import numpy as np
 
+import Data_IO.tfrecord_io as tfrecord_io
+
 
 # 32 batches (64 smaples per batch) = 2048 samples in a shard
 TRAIN_SHARD_SIZE = 32*64 
@@ -73,6 +75,7 @@ tf.app.flags.DEFINE_integer('inputQueueMemoryFactor', 16,
 IMAGE_SIZE = 128
 IMAGE_CAHNNELS = 2
 
+
 def validate_for_nan(tensorT):
     # Input:
     #   Tensor
@@ -83,82 +86,6 @@ def validate_for_nan(tensorT):
     validity = tf.select(tf.is_nan(tensorMean), 0, 1) * tf.select(tf.is_inf(tensorMean), 0, 1)
     return validity
 
-def decode_byte_string(filename):
-    """Decode and preprocess one filename.
-    Args:
-      filename: Binary string Tensor
-    Returns:
-      String Tensor containing the image in float32
-    """
-    tfname = tf.decode_raw(filename, tf.uint8)
-    return tfname
-
-def decode_byte_image(image):
-    """Decode and preprocess one image for evaluation or training.
-    Args:
-      imageBuffer: Binary string Tensor
-      Height, Widath, Channels <----- GLOBAL VARIABLES ARE USED DUE TO SET_SHAPE REQUIREMENTS
-    Returns:
-      3-D float Tensor containing the image in float32
-    """
-    image = tf.decode_raw(image, tf.uint8)
-    image = tf.cast(image, dtype=tf.float32)
-    image = tf.reshape(image, [IMAGE_SIZE, IMAGE_SIZE, IMAGE_CAHNNELS])
-    image.set_shape([IMAGE_SIZE, IMAGE_SIZE, IMAGE_CAHNNELS])
-    return image
-
-def parse_example_proto(exampleSerialized, **kwargs):
-    """Parses an Example proto containing a training example of an image.
-    The output of the preprocessing script is a dataset
-    containing serialized Example protocol buffers. Each Example proto contains
-    the following fields:
-        height: 128
-        width: 128
-        channels: 2  -> 2 images stacked
-        HAB: [8]
-        pOrig: [8]
-        image/encoded: <bytes encoded string>
-
-        'height': _int64_feature(rows),
-        'width': _int64_feature(cols),
-        'depth': _int64_feature(depth),
-        'pOrig': _float_nparray(pOrigList),
-        'HAB': _float_nparray(HABList), # 2D np array
-        'image': _bytes_feature(flatImageList)
-
-    Args:
-        exampleSerialized: scalar Tensor tf.string containing a serialized
-        Example protocol buffer.
-    Returns:
-      imageBuffer: Tensor tf.string containing the contents of a JPEG file.
-      HAB: Tensor tf.int32 containing the homography.
-      pOrig: Tensor tf.int32 contating the origianl square points
-    """
-    
-    featureMap ={
-        'filename': tf.FixedLenFeature([], dtype=tf.string, default_value=''),
-        'height': tf.FixedLenFeature([1], dtype=tf.int64),
-        'width': tf.FixedLenFeature([1], dtype=tf.int64),
-        'depth': tf.FixedLenFeature([1], dtype=tf.int64),
-        'pOrig': tf.FixedLenFeature([8], dtype=tf.float32),
-        'HAB': tf.FixedLenFeature([8], dtype=tf.float32),
-        'image': tf.FixedLenFeature([], dtype=tf.string, default_value='')}
-
-    features = tf.parse_single_example(exampleSerialized, featureMap)
-    
-    # NOT BEING USED - INSTEAD GLOBAL VARIABLES ARE USED - DUE TO SET_SHAPE REQUIREMENT
-    #height = tf.cast(features['height'], dtype=tf.int32)
-    #width = tf.cast(features['width'], dtype=tf.int32)
-    #depth = tf.cast(features['depth'], dtype=tf.int32)
-
-    filename = decode_byte_string(features['filename'])
-    image = decode_byte_image(features['image'])
-    pOrig = features['pOrig']
-    HAB = features['HAB']
-
-    #validate_for_nan()
-
-    return image, HAB, pOrig, filename
 
 def image_preprocessing(image, **kwargs):
     """Decode and preprocess one image for evaluation or training.
@@ -296,11 +223,11 @@ def fetch_inputs(numPreprocessThreads=None, numReaders=1, **kwargs):
         imagesHomographiesOrigsqrs = []
         for _ in range(numPreprocessThreads):
             # Parse a serialized Example proto to extract the image and metadata.
-            imageBuffer, HAB, origSqr, tfrecFilename = parse_example_proto(exampleSerialized, **kwargs)
+            imageBuffer, HAB, tfrecFilename = tfrecord_io.parse_example_proto(exampleSerialized, **kwargs)
             image = image_preprocessing(imageBuffer, **kwargs) # normalized between [-1,1]
-            imagesHomographiesOrigsqrs.append([image, HAB, origSqr])
+            imagesHomographiesOrigsqrs.append([image, HAB, tfrecFilename])
 
-        batchImage, batchHAB, batchOrigSqr = tf.train.batch_join(imagesHomographiesOrigsqrs,
+        batchImage, batchHAB, batchTFrecFilename = tf.train.batch_join(imagesHomographiesOrigsqrs,
                                                         batch_size=kwargs.get('activeBatchSize'),
                                                         capacity=2 * numPreprocessThreads * batchSize)
 
@@ -314,7 +241,7 @@ def fetch_inputs(numPreprocessThreads=None, numReaders=1, **kwargs):
         tf.summary.image('imagesOrig', image0)
         tf.summary.image('imagesPert', image1)
 
-        return batchImage, batchHAB, batchOrigSqr
+        return batchImage, batchHAB, batchTFrecFilename
 
         # Read examples from files in the filename queue.
         #read_input = read_calusa_heatmap(filenameQueue)
@@ -334,11 +261,10 @@ def inputs(**kwargs):
       ValueError: If no dataDir
     """     
     with tf.device('/cpu:0'):
-        batchImage, batchHAB, batchOrigSqr = fetch_inputs(**kwargs)
+        batchImage, batchHAB, batchTFrecFilename = fetch_inputs(**kwargs)
         
         if kwargs.get('usefp16'):
             batchImage = tf.cast(batchImage, tf.float16)
             batchHAB = tf.cast(batchHAB, tf.float16)
-            batchOrigSqr = tf.cast(batchOrigSqr, tf.float16)
 
-    return batchImage, batchHAB, batchOrigSqr
+    return batchImage, batchHAB, batchTFrecFilename

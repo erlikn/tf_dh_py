@@ -30,7 +30,7 @@ import tensorflow as tf
 # import json_maker, update json files and read requested json file
 import Model_Settings.json_maker as json_maker
 json_maker.recompile_json_files()
-jsonToRead = '170213_TRES_B.json'
+jsonToRead = '170131_TCOR_B.json'
 print("Reading %s" % jsonToRead)
 with open('Model_Settings/'+jsonToRead) as data_file:
     modelParams = json.load(data_file)
@@ -175,6 +175,16 @@ def train():
                 minPixelLoss = lossValueSumPixel
                 checkpointPath = os.path.join(modelParams['trainLogDir'], 'model_minLoss.ckpt')
                 saver.save(sess, checkpointPath)
+
+
+        ######### USE LATEST STATE TO WARP IMAGES
+        for step in xrange(int((modelParams['numTrainDatasetExamples']/modelParams['trainBatchSize']))+1):
+            startTime = time.time()
+            predictedHAB, lossValue = sess.run([pHAB, loss])
+            duration = time.time() - startTime
+            #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFilenames
+            data_output.output(images, tHAB, pHAB, tfrecFilenames, **modelParams)
+            
 
 
 def _setupLogging(logPath):

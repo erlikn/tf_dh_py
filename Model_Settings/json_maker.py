@@ -3,14 +3,22 @@ import collections
 import numpy as np
 
 def write_json_file(filename, datafile):
-        datafile = collections.OrderedDict(sorted(datafile.items()))
-        with open(filename, 'w') as outFile:
-                json.dump(datafile, outFile, indent = 0)
-
+    filename = 'Model_Settings/'+filename
+    datafile = collections.OrderedDict(sorted(datafile.items()))
+    with open(filename, 'w') as outFile:
+        json.dump(datafile, outFile, indent = 0)
+####################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
 
 # Twin Common Parameters
 trainLogDirBase = '../Data/128_logs/tfdh_twin_py_logs/train_logs/'
 testLogDirBase = '../Data/128_logs/tfdh_twin_py_logs/test_logs/'
+wrapedImageFolderNameBase = '../Data/128_train_tfrecords_iterative/'
 
 # Shared Descriptions
 modelName_desc = "Name of the model file to be loaded from Model_Factory"
@@ -23,6 +31,7 @@ numTrainDatasetExamples_desc = "Number of images to process in train dataset"
 numTestDatasetExamples_desc = "Number of images to process in test dataset"
 trainLogDir_desc = "Directory where to write train event logs and checkpoints"
 testLogDir_desc = "Directory where to write test event logs and checkpoints"
+wrapedImageFolderName_desc = "Directory where to write wrapped images"
 
 imageSize_desc = "Image square size"
 imageChannels_desc = "Image channels"
@@ -61,6 +70,7 @@ numTrainDatasetExamples = 500000
 numTestDatasetExamples = 25000
 trainLogDir = trainLogDirBase+'170127_TWN_MOM_W'
 testLogDir = testLogDirBase+'170127_TWN_MOM_W'
+wrapedImageFolderName = wrapedImageFolderNameBase+' '
 
 imageSize = 128
 imageChannels = 2
@@ -98,6 +108,7 @@ data = {'modelName' : modelName,
         'numTestDatasetExamples' : numTestDatasetExamples,
         'trainLogDir' : trainLogDir,
         'testLogDir' : testLogDir,
+        'wrapedImageFolderName' : wrapedImageFolderName,
 
         'imageSize' : imageSize,
         'imageChannels' : imageChannels,
@@ -136,6 +147,7 @@ data = {'modelName' : modelName,
         'numTestDatasetExamples_desc' : numTestDatasetExamples_desc,
         'trainLogDir_desc' : trainLogDir_desc,
         'testLogDir_desc' : testLogDir_desc,
+        'wrapedImageFolderName' : wrapedImageFolderName_desc,
         
         'imageSize_desc' : imageSize_desc,
         'imageChannels_desc' : imageChannels_desc,
@@ -168,169 +180,184 @@ data = {'modelName' : modelName,
 reCompileJSON=True
 
 ############## TWIN
-if reCompileJSON:
-    write_json_file('170127_TWN_MOM_W.json', data)
+def write_twin():
+    # Twin Common Parameters
+    trainLogDirBase = '../Data/128_logs/tfdh_twin_py_logs/train_logs/'
+    testLogDirBase = '../Data/128_logs/tfdh_twin_py_logs/test_logs/'
 
-if reCompileJSON:
-    data['trainLogDir'] = trainLogDirBase+'170127_TWN_MOM_B'
-    data['testLogDir'] = testLogDirBase+'170127_TWN_MOM_B'
-    data['trainMaxSteps'] = 120000
-    data['numEpochsPerDecay'] = 40000.0
-    data['trainBatchSize'] = 20
-    data['testBatchSize'] = 20
-    data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-    data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
-    data['batchNorm'] = True
-    data['weightNorm'] = False
-    write_json_file('170127_TWN_MOM_B.json', data)
-
-if reCompileJSON:
-    data['trainLogDir'] = trainLogDirBase+'170128_TWN_MOM_B'
-    data['testLogDir'] = testLogDirBase+'170128_TWN_MOM_B'
-    data['trainMaxSteps'] = 90000
-    data['numEpochsPerDecay'] = 30000.0
-    data['trainBatchSize'] = 20
-    data['testBatchSize'] = 20
-    data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-    data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 2048]
-    data['batchNorm'] = True
-    data['weightNorm'] = False
-    write_json_file('170128_TWN_MOM_B.json', data)
+    if reCompileJSON:
+        data['trainLogDir'] = trainLogDirBase+'170127_TWN_MOM_W'
+        data['testLogDir'] = testLogDirBase+'170127_TWN_MOM_W'
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 20
+        data['testBatchSize'] = 20
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['batchNorm'] = False
+        data['weightNorm'] = True
+        write_json_file('170127_TWN_MOM_W.json', data)
     
-if reCompileJSON:
-    data['trainLogDir'] = trainLogDirBase+'170127_TWN_MOM_BW'
-    data['testLogDir'] = testLogDirBase+'170127_TWN_MOM_BW'
-    data['trainMaxSteps'] = 120000
-    data['numEpochsPerDecay'] = 40000.0
-    data['trainBatchSize'] = 20
-    data['testBatchSize'] = 20
-    data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-    data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
-    data['batchNorm'] = True
-    data['weightNorm'] = True
-    write_json_file('170127_TWN_MOM_BW.json', data)
-##############
-if reCompileJSON:
-    data['trainLogDir'] = trainLogDirBase+'170118_AdamOpt_B16_256'
-    data['testLogDir'] = testLogDirBase+'170118_AdamOpt_B16_256'
-    data['trainMaxSteps'] = 90000
-    data['numEpochsPerDecay'] = 30000.0
-    data['trainBatchSize'] = 16
-    data['testBatchSize'] = 16
-    data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-    data['modelShape'] = [64, 64, 64, 64, 128, 128, 256, 256, 1024]
-    data['batchNorm'] = False
-    data['weightNorm'] = True
-    write_json_file('170118_AdamOpt_B16_256.json', data)
-###############
-if reCompileJSON:
-    data['trainLogDir'] = trainLogDirBase+'170118_MomentumOpt_B20_256'
-    data['testLogDir'] = testLogDirBase+'170118_MomentumOpt_B20_256'
-    data['trainMaxSteps'] = 90000
-    data['numEpochsPerDecay'] = 30000.0
-    data['trainBatchSize'] = 20
-    data['testBatchSize'] = 20
-    data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-    data['modelShape'] = [64, 64, 64, 64, 128, 128, 256, 256, 1024]
-    data['batchNorm'] = False
-    data['weightNorm'] = True
-    write_json_file('170118_MomentumOpt_B20_256.json', data)
-##############
-if reCompileJSON:
-    data['trainLogDir'] = trainLogDirBase+'170120_MomentumOpt_256_256'
-    data['testLogDir'] = testLogDirBase+'170120_MomentumOpt_256_256'
-    data['trainMaxSteps'] = 90000
-    data['numEpochsPerDecay'] = 30000.0
-    data['trainBatchSize'] = 20
-    data['testBatchSize'] = 20
-    data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-    data['modelShape'] = [64, 64, 64, 64, 256, 256, 256, 256, 1024]
-    data['batchNorm'] = False
-    data['weightNorm'] = True
-    write_json_file('170120_MomentumOpt_256_256.json', data)
-
-if reCompileJSON:
-    data['trainLogDir'] = trainLogDirBase+'170120_MomentumOpt_256_256_150k'
-    data['testLogDir'] = testLogDirBase+'170120_MomentumOpt_256_256_150k'
-    data['trainMaxSteps'] = 150000
-    data['numEpochsPerDecay'] = 50000.0
-    data['trainBatchSize'] = 20
-    data['testBatchSize'] = 20
-    data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-    data['modelShape'] = [64, 64, 64, 64, 256, 256, 256, 256, 1024]
-    data['batchNorm'] = False
-    data['weightNorm'] = True
-    write_json_file('170120_MomentumOpt_256_256_150k.json', data)
+    if reCompileJSON:
+        data['trainLogDir'] = trainLogDirBase+'170127_TWN_MOM_B'
+        data['testLogDir'] = testLogDirBase+'170127_TWN_MOM_B'
+        data['trainMaxSteps'] = 120000
+        data['numEpochsPerDecay'] = 40000.0
+        data['trainBatchSize'] = 20
+        data['testBatchSize'] = 20
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['batchNorm'] = True
+        data['weightNorm'] = False
+        write_json_file('170127_TWN_MOM_B.json', data)
     
-############## 
-if reCompileJSON:
-    data['trainLogDir'] = trainLogDirBase+'170125_MomentumOpt_256_256_BNorm'
-    data['testLogDir'] = testLogDirBase+'170125_MomentumOpt_256_256_BNorm'
-    data['trainMaxSteps'] = 90000
-    data['numEpochsPerDecay'] = 30000.0
-    data['trainBatchSize'] = 20
-    data['testBatchSize'] = 20
-    data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-    data['modelShape'] = [64, 64, 64, 64, 256, 256, 256, 256, 1024]
-    data['batchNorm'] = True
-    data['weightNorm'] = False
-    write_json_file('170125_MomentumOpt_256_256_BNorm.json', data)
-##############
-if reCompileJSON:
-    data['trainLogDir'] = trainLogDirBase+'170125_MomentumOpt_256_256_WBNorm'
-    data['testLogDir'] = testLogDirBase+'170125_MomentumOpt_256_256_WBNorm'
-    data['trainMaxSteps'] = 90000
-    data['numEpochsPerDecay'] = 30000.0
-    data['trainBatchSize'] = 10
-    data['testBatchSize'] = 10
-    data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-    data['modelShape'] = [64, 64, 64, 64, 256, 256, 256, 256, 1024]
-    data['batchNorm'] = True
-    data['weightNorm'] = True
-    write_json_file('170125_MomentumOpt_256_256_WBNorm.json', data)
-
-##############
-if reCompileJSON:
-    data['trainLogDir'] = trainLogDirBase+'170129_TWN_MOM_B_64'
-    data['testLogDir'] = testLogDirBase+'170129_TWN_MOM_B_64'
-    data['trainMaxSteps'] = 90000
-    data['numEpochsPerDecay'] = 30000.0
-    data['trainBatchSize'] = 20
-    data['testBatchSize'] = 20
-    data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-    data['modelShape'] = [64, 64, 64, 64, 64, 64, 64, 64, 1024]
-    data['batchNorm'] = True
-    data['weightNorm'] = False
-    write_json_file('170129_TWN_MOM_B_64.json', data)
-
-
-##############
-if reCompileJSON:
-    data['trainLogDir'] = trainLogDirBase+'170129_TWN_MOM_B_32'
-    data['testLogDir'] = testLogDirBase+'170129_TWN_MOM_B_32'
-    data['trainMaxSteps'] = 30000#90000
-    data['numEpochsPerDecay'] = 10000.0#30000.0
-    data['trainBatchSize'] = 60#20
-    data['testBatchSize'] = 60#20
-    data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-    data['modelShape'] = [32, 32, 32, 32, 32, 32, 32, 32, 1024]
-    data['batchNorm'] = True
-    data['weightNorm'] = False
-    write_json_file('170129_TWN_MOM_B_32.json', data)
+    if reCompileJSON:
+        data['trainLogDir'] = trainLogDirBase+'170128_TWN_MOM_B'
+        data['testLogDir'] = testLogDirBase+'170128_TWN_MOM_B'
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 20
+        data['testBatchSize'] = 20
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 2048]
+        data['batchNorm'] = True
+        data['weightNorm'] = False
+        write_json_file('170128_TWN_MOM_B.json', data)
+        
+    if reCompileJSON:
+        data['trainLogDir'] = trainLogDirBase+'170127_TWN_MOM_BW'
+        data['testLogDir'] = testLogDirBase+'170127_TWN_MOM_BW'
+        data['trainMaxSteps'] = 120000
+        data['numEpochsPerDecay'] = 40000.0
+        data['trainBatchSize'] = 20
+        data['testBatchSize'] = 20
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['batchNorm'] = True
+        data['weightNorm'] = True
+        write_json_file('170127_TWN_MOM_BW.json', data)
+    ##############
+    if reCompileJSON:
+        data['trainLogDir'] = trainLogDirBase+'170118_AdamOpt_B16_256'
+        data['testLogDir'] = testLogDirBase+'170118_AdamOpt_B16_256'
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 16
+        data['testBatchSize'] = 16
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 256, 256, 1024]
+        data['batchNorm'] = False
+        data['weightNorm'] = True
+        write_json_file('170118_AdamOpt_B16_256.json', data)
+    ###############
+    if reCompileJSON:
+        data['trainLogDir'] = trainLogDirBase+'170118_MomentumOpt_B20_256'
+        data['testLogDir'] = testLogDirBase+'170118_MomentumOpt_B20_256'
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 20
+        data['testBatchSize'] = 20
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 256, 256, 1024]
+        data['batchNorm'] = False
+        data['weightNorm'] = True
+        write_json_file('170118_MomentumOpt_B20_256.json', data)
+    ##############
+    if reCompileJSON:
+        data['trainLogDir'] = trainLogDirBase+'170120_MomentumOpt_256_256'
+        data['testLogDir'] = testLogDirBase+'170120_MomentumOpt_256_256'
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 20
+        data['testBatchSize'] = 20
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 256, 256, 256, 256, 1024]
+        data['batchNorm'] = False
+        data['weightNorm'] = True
+        write_json_file('170120_MomentumOpt_256_256.json', data)
     
-##############
-if reCompileJSON:
-    data['trainLogDir'] = trainLogDirBase+'170130_TWN_MOM_B_16'
-    data['testLogDir'] = testLogDirBase+'170130_TWN_MOM_B_16'
-    data['trainMaxSteps'] = 15000#90000
-    data['numEpochsPerDecay'] = 5000.0#30000.0
-    data['trainBatchSize'] = 120#20
-    data['testBatchSize'] = 120#20
-    data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-    data['modelShape'] = [16, 16, 16, 16, 16, 16, 16, 16, 1024]
-    data['batchNorm'] = True
-    data['weightNorm'] = False
-    write_json_file('170130_TWN_MOM_B_16.json', data)
+    if reCompileJSON:
+        data['trainLogDir'] = trainLogDirBase+'170120_MomentumOpt_256_256_150k'
+        data['testLogDir'] = testLogDirBase+'170120_MomentumOpt_256_256_150k'
+        data['trainMaxSteps'] = 150000
+        data['numEpochsPerDecay'] = 50000.0
+        data['trainBatchSize'] = 20
+        data['testBatchSize'] = 20
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 256, 256, 256, 256, 1024]
+        data['batchNorm'] = False
+        data['weightNorm'] = True
+        write_json_file('170120_MomentumOpt_256_256_150k.json', data)
+        
+    ############## 
+    if reCompileJSON:
+        data['trainLogDir'] = trainLogDirBase+'170125_MomentumOpt_256_256_BNorm'
+        data['testLogDir'] = testLogDirBase+'170125_MomentumOpt_256_256_BNorm'
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 20
+        data['testBatchSize'] = 20
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 256, 256, 256, 256, 1024]
+        data['batchNorm'] = True
+        data['weightNorm'] = False
+        write_json_file('170125_MomentumOpt_256_256_BNorm.json', data)
+    ##############
+    if reCompileJSON:
+        data['trainLogDir'] = trainLogDirBase+'170125_MomentumOpt_256_256_WBNorm'
+        data['testLogDir'] = testLogDirBase+'170125_MomentumOpt_256_256_WBNorm'
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 10
+        data['testBatchSize'] = 10
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 256, 256, 256, 256, 1024]
+        data['batchNorm'] = True
+        data['weightNorm'] = True
+        write_json_file('170125_MomentumOpt_256_256_WBNorm.json', data)
+    
+    ##############
+    if reCompileJSON:
+        data['trainLogDir'] = trainLogDirBase+'170129_TWN_MOM_B_64'
+        data['testLogDir'] = testLogDirBase+'170129_TWN_MOM_B_64'
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 20
+        data['testBatchSize'] = 20
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 64, 64, 64, 64, 1024]
+        data['batchNorm'] = True
+        data['weightNorm'] = False
+        write_json_file('170129_TWN_MOM_B_64.json', data)
+    
+    
+    ##############
+    if reCompileJSON:
+        data['trainLogDir'] = trainLogDirBase+'170129_TWN_MOM_B_32'
+        data['testLogDir'] = testLogDirBase+'170129_TWN_MOM_B_32'
+        data['trainMaxSteps'] = 30000#90000
+        data['numEpochsPerDecay'] = 10000.0#30000.0
+        data['trainBatchSize'] = 60#20
+        data['testBatchSize'] = 60#20
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [32, 32, 32, 32, 32, 32, 32, 32, 1024]
+        data['batchNorm'] = True
+        data['weightNorm'] = False
+        write_json_file('170129_TWN_MOM_B_32.json', data)
+        
+    ##############
+    if reCompileJSON:
+        data['trainLogDir'] = trainLogDirBase+'170130_TWN_MOM_B_16'
+        data['testLogDir'] = testLogDirBase+'170130_TWN_MOM_B_16'
+        data['trainMaxSteps'] = 15000#90000
+        data['numEpochsPerDecay'] = 5000.0#30000.0
+        data['trainBatchSize'] = 120#20
+        data['testBatchSize'] = 120#20
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [16, 16, 16, 16, 16, 16, 16, 16, 1024]
+        data['batchNorm'] = True
+        data['weightNorm'] = False
+        write_json_file('170130_TWN_MOM_B_16.json', data)
     
 
 ####################################################################################
@@ -341,53 +368,53 @@ if reCompileJSON:
 ####################################################################################
 ####################################################################################
 
-# Single Common Parameters
-trainLogDirBase = '../Data/128_logs/tfdh_py_logs/train_logs/'
-testLogDirBase = '../Data/128_logs/tfdh_py_logs/test_logs/'
+def write_single():
+    # Single Common Parameters
+    trainLogDirBase = '../Data/128_logs/tfdh_py_logs/train_logs/'
+    testLogDirBase = '../Data/128_logs/tfdh_py_logs/test_logs/'
 
-data['modelName'] = 'cnn_8l2f'
+    data['modelName'] = 'cnn_8l2f'
 
-##############
-if reCompileJSON:
-    data['trainLogDir'] = trainLogDirBase+'170126_SIN_B'
-    data['testLogDir'] = testLogDirBase+'170126_SIN_B'
-    data['trainMaxSteps'] = 90000
-    data['numEpochsPerDecay'] = 30000.0
-    data['trainBatchSize'] = 20
-    data['testBatchSize'] = 20
-    data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-    data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
-    data['batchNorm'] = True
-    data['weightNorm'] = False
-    write_json_file('170126_SIN_B.json', data)
+    ##############
+    if reCompileJSON:
+        data['trainLogDir'] = trainLogDirBase+'170126_SIN_B'
+        data['testLogDir'] = testLogDirBase+'170126_SIN_B'
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 20
+        data['testBatchSize'] = 20
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['batchNorm'] = True
+        data['weightNorm'] = False
+        write_json_file('170126_SIN_B.json', data)
 
-if reCompileJSON:
-    data['trainLogDir'] = trainLogDirBase+'170126_SIN_W'
-    data['testLogDir'] = testLogDirBase+'170126_SIN_W'
-    data['trainMaxSteps'] = 90000
-    data['numEpochsPerDecay'] = 30000.0
-    data['trainBatchSize'] = 20
-    data['testBatchSize'] = 20
-    data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-    data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
-    data['batchNorm'] = False
-    data['weightNorm'] = True
-    write_json_file('170126_SIN_W.json', data)
+    if reCompileJSON:
+        data['trainLogDir'] = trainLogDirBase+'170126_SIN_W'
+        data['testLogDir'] = testLogDirBase+'170126_SIN_W'
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 20
+        data['testBatchSize'] = 20
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['batchNorm'] = False
+        data['weightNorm'] = True
+        write_json_file('170126_SIN_W.json', data)
 
-if reCompileJSON:
-    data['trainLogDir'] = trainLogDirBase+'170126_SIN_BW'
-    data['testLogDir'] = testLogDirBase+'170126_SIN_BW'
-    data['trainMaxSteps'] = 90000
-    data['numEpochsPerDecay'] = 30000.0
-    data['trainBatchSize'] = 20
-    data['testBatchSize'] = 20
-    data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-    data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
-    data['batchNorm'] = True
-    data['weightNorm'] = True
-    write_json_file('170126_SIN_BW.json', data)
-##############
-
+    if reCompileJSON:
+        data['trainLogDir'] = trainLogDirBase+'170126_SIN_BW'
+        data['testLogDir'] = testLogDirBase+'170126_SIN_BW'
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 20
+        data['testBatchSize'] = 20
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['batchNorm'] = True
+        data['weightNorm'] = True
+        write_json_file('170126_SIN_BW.json', data)
+    ##############
 
 
 
@@ -400,22 +427,101 @@ if reCompileJSON:
 ####################################################################################
 ####################################################################################
 
-# Twin Correlation Matching Common Parameters
-trainLogDirBase = '../Data/128_logs/tfdh_twincorr_logs/train_logs/'
-testLogDirBase = '../Data/128_logs/tfdh_twincorr_logs/test_logs/'
+def write_twin_correlation():
+    # Twin Correlation Matching Common Parameters
+    trainLogDirBase = '../Data/128_logs/tfdh_twincorr_logs/train_logs/'
+    testLogDirBase = '../Data/128_logs/tfdh_twincorr_logs/test_logs/'
 
-data['modelName'] = 'twin_cnn_4pCorr4l2f'
+    data['modelName'] = 'twin_cnn_4pCorr4l2f'
 
-##############
-if reCompileJSON:
-    data['trainLogDir'] = trainLogDirBase+'170131_TCOR_B'
-    data['testLogDir'] = testLogDirBase+'170126_TCOR_B'
-    data['trainMaxSteps'] = 90000
-    data['numEpochsPerDecay'] = 30000.0
-    data['trainBatchSize'] = 20
-    data['testBatchSize'] = 20
-    data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-    data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
-    data['batchNorm'] = True
-    data['weightNorm'] = False
-    write_json_file('170131_TCOR_B.json', data)
+    ##############
+    if reCompileJSON:
+        data['trainLogDir'] = trainLogDirBase+'170131_TCOR_B'
+        data['testLogDir'] = testLogDirBase+'170131_TCOR_B'
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 20
+        data['testBatchSize'] = 20
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['batchNorm'] = True
+        data['weightNorm'] = False
+        write_json_file('170131_TCOR_B.json', data)
+
+
+####################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
+
+def write_iterative():
+    # Twin Correlation Matching Common Parameters
+    trainLogDirBase = '../Data/128_logs/tfdh_twin_iterative_logs/train_logs/'
+    testLogDirBase = '../Data/128_logs/tfdh_twin_iterative_logs/test_logs/'
+
+    # Iterative model only changes the wayoutput is written, 
+    # so any model can be used by ease
+    data['modelName'] = 'twin_cnn_4p4l2f'
+
+    ##############
+    if reCompileJSON:
+        data['trainLogDir'] = trainLogDirBase+'170208_ITR_B'
+        data['testLogDir'] = testLogDirBase+'170208_ITR_B'
+        data['wrapedImageFolderName'] = wrapedImageFolderNameBase + '170208_ITR_B'
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 20
+        data['testBatchSize'] = 20
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['batchNorm'] = True
+        data['weightNorm'] = False
+        write_json_file('170208_ITR_B.json', data)
+
+####################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
+
+
+def write_twin_residual():
+    # Twin Correlation Matching Common Parameters
+    trainLogDirBase = '../Data/128_logs/tfdh_twin_residual_logs/train_logs/'
+    testLogDirBase = '../Data/128_logs/tfdh_twin_residual_logs/test_logs/'
+
+    data['modelName'] = 'twin_cnn_res_4p4l2f'
+
+    ##############
+    if reCompileJSON:
+        data['trainLogDir'] = trainLogDirBase+'170213_TRES_B'
+        data['testLogDir'] = testLogDirBase+'170213_TRES_B'
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 20
+        data['testBatchSize'] = 20
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['batchNorm'] = True
+        data['weightNorm'] = False
+        write_json_file('170213_TRES_B.json', data)
+####################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
+####################################################################################
+
+def recompile_json_files():
+    write_single()
+    write_twin()
+    write_twin_correlation()
+    write_iterative()
+    write_twin_residual()
+    print("JSON files updated")
