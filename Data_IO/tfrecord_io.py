@@ -20,47 +20,7 @@ def _bytes_feature(value):
 def _float_nparray(value):
     return tf.train.Feature(float_list=tf.train.FloatList(value=value))
 
-def tfrecord_writer(imgPatchOrig, imgPatchPert, HAB, tfRecordFolder, tfFileName):
-    """Converts a dataset to tfrecords."""
-    #images = data_set.images
-    #labels = data_set.labels
-    #num_examples = data_set.num_examples
-    tfRecordPath = tfRecordFolder + tfFileName
-    filename = np.asarray(tfFileName).tostring()
-
-    rows = imgPatchOrig.shape[0]
-    cols = imgPatchOrig.shape[1]
-    depth = 2
-    #OLD
-    stackedImage = np.stack((imgPatchOrig, imgPatchPert), axis=2) #3D array (hieght, width, channels)
-    flatImage = stackedImage.reshape(rows*cols*depth)
-    #Stack Images
-    #stackedImage = np.array([imgPatchOrig.reshape(imgPatchOrig.shape[0]*imgPatchOrig.shape[1]),
-    #                imgPatchPert.reshape(imgPatchPert.shape[0]*imgPatchPert.shape[1])])
-    #flatImage = stackedImage.reshape(stackedImage.shape[0]*stackedImage.shape[1])
-    
-    flatImageList = flatImage.tostring()
-
-    HABRow = np.asarray([HAB[0][0], HAB[0][1], HAB[0][2], HAB[0][3],
-                         HAB[1][0], HAB[1][1], HAB[1][2], HAB[1][3]], np.float32)
-    HABList = HABRow.tolist()
-    
-    #print('Writing', filename)
-    writer = tf.python_io.TFRecordWriter(tfRecordPath)
-    example = tf.train.Example(features=tf.train.Features(feature={
-        'filename': _bytes_feature(filename),
-        'height': _int64_feature(rows),
-        'width': _int64_feature(cols),
-        'depth': _int64_feature(depth),
-        'HAB': _float_nparray(HABList), # 2D np array
-        'image': _bytes_feature(flatImageList)
-        }))
-    writer.write(example.SerializeToString())
-    writer.close()
-
-
-
-def decode_byte_string(filename):
+def _decode_byte_string(filename):
     """Decode and preprocess one filename.
     Args:
       filename: Binary string Tensor
@@ -70,7 +30,7 @@ def decode_byte_string(filename):
     tfname = tf.decode_raw(filename, tf.uint8)
     return tfname
 
-def decode_byte_image(image):
+def _decode_byte_image(image, height, width, depth):
     """Decode and preprocess one image for evaluation or training.
     Args:
       imageBuffer: Binary string Tensor
@@ -80,8 +40,8 @@ def decode_byte_image(image):
     """
     image = tf.decode_raw(image, tf.uint8)
     image = tf.cast(image, dtype=tf.float32)
-    image = tf.reshape(image, [IMAGE_SIZE, IMAGE_SIZE, IMAGE_CAHNNELS])
-    image.set_shape([IMAGE_SIZE, IMAGE_SIZE, IMAGE_CAHNNELS])
+    image = tf.reshape(image, [height, width, depth])
+    image.set_shape([height, width, depth])
     return image
 
 def parse_example_proto(exampleSerialized, **kwargs):
@@ -121,16 +81,51 @@ def parse_example_proto(exampleSerialized, **kwargs):
         'image': tf.FixedLenFeature([], dtype=tf.string, default_value='')}
 
     features = tf.parse_single_example(exampleSerialized, featureMap)
-    
-    # NOT BEING USED - INSTEAD GLOBAL VARIABLES ARE USED - DUE TO SET_SHAPE REQUIREMENT
-    #height = tf.cast(features['height'], dtype=tf.int32)
-    #width = tf.cast(features['width'], dtype=tf.int32)
-    #depth = tf.cast(features['depth'], dtype=tf.int32)
 
-    filename = decode_byte_string(features['filename'])
-    image = decode_byte_image(features['image'])
+    filename = _decode_byte_string(features['filename'])
+    image = _decode_byte_image(features['image'], kwargs.get('imageHeight'), kwargs.get('imageWidth'), kwargs.get('imageChannels'))
     HAB = features['HAB']
 
     #validate_for_nan()
 
     return image, HAB, filename
+
+def tfrecord_writer(imgPatchOrig, imgPatchPert, HAB, tfRecordFolder, tfFileName):
+    """Converts a dataset to tfrecords."""
+    #images = data_set.images
+    #labels = data_set.labels
+    #num_examples = data_set.num_examples
+    tfRecordPath = tfRecordFolder + tfFileName
+    filename = np.asarray(tfFileName).tostring()
+
+    rows = imgPatchOrig.shape[0]
+    cols = imgPatchOrig.shape[1]
+    depth = 2
+    #OLD
+    stackedImage = np.stack((imgPatchOrig, imgPatchPert), axis=2) #3D array (hieght, width, channels)
+    flatImage = stackedImage.reshape(rows*cols*depth)
+    #Stack Images
+    #stackedImage = np.array([imgPatchOrig.reshape(imgPatchOrig.shape[0]*imgPatchOrig.shape[1]),
+    #                imgPatchPert.reshape(imgPatchPert.shape[0]*imgPatchPert.shape[1])])
+    #flatImage = stackedImage.reshape(stackedImage.shape[0]*stackedImage.shape[1])
+    
+    flatImageList = flatImage.tostring()
+
+    HABRow = np.asarray([HAB[0][0], HAB[0][1], HAB[0][2], HAB[0][3],
+                         HAB[1][0], HAB[1][1], HAB[1][2], HAB[1][3]], np.float32)
+    HABList = HABRow.tolist()
+    
+    #print('Writing', filename)
+    writer = tf.python_io.TFRecordWriter(tfRecordPath)
+    example = tf.train.Example(features=tf.train.Features(feature={
+        'filename': _bytes_feature(filename),
+        'height': _int64_feature(rows),
+        'width': _int64_feature(cols),
+        'depth': _int64_feature(depth),
+        'HAB': _float_nparray(HABList), # 2D np array
+        'image': _bytes_feature(flatImageList)
+        }))
+    writer.write(example.SerializeToString())
+    writer.close()
+
+

@@ -33,7 +33,8 @@ trainLogDir_desc = "Directory where to write train event logs and checkpoints"
 testLogDir_desc = "Directory where to write test event logs and checkpoints"
 wrapedImageFolderName_desc = "Directory where to write wrapped images"
 
-imageSize_desc = "Image square size"
+imageHeight_desc = "Image Height"
+imageWidth_desc = "Image Width"
 imageChannels_desc = "Image channels"
 outputSize_desc = "Final output size"
 modelShape_desc = "Network model with 8 convolutional layers with 2 fully connected layers"
@@ -72,7 +73,8 @@ trainLogDir = trainLogDirBase+'170127_TWN_MOM_W'
 testLogDir = testLogDirBase+'170127_TWN_MOM_W'
 wrapedImageFolderName = wrapedImageFolderNameBase+' '
 
-imageSize = 128
+imageHeight = 128
+imageWidth = 128
 imageChannels = 2
 outputSize = 8
 modelShape = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
@@ -110,7 +112,8 @@ data = {'modelName' : modelName,
         'testLogDir' : testLogDir,
         'wrapedImageFolderName' : wrapedImageFolderName,
 
-        'imageSize' : imageSize,
+        'imageHeight' : imageHeight,
+        'imageWidth' : imageWidth,
         'imageChannels' : imageChannels,
         'outputSize' : outputSize,
         'modelShape' : modelShape,
@@ -149,7 +152,8 @@ data = {'modelName' : modelName,
         'testLogDir_desc' : testLogDir_desc,
         'wrapedImageFolderName' : wrapedImageFolderName_desc,
         
-        'imageSize_desc' : imageSize_desc,
+        'imageHeight_desc' : imageHeight_desc,
+        'imageWidth_desc' : imageWidth_desc,
         'imageChannels_desc' : imageChannels_desc,
         'outputSize_desc' : outputSize_desc,
         'modelShape_desc' : modelShape_desc,
@@ -459,8 +463,8 @@ def write_twin_correlation():
 
 def write_iterative():
     # Twin Correlation Matching Common Parameters
-    trainLogDirBase = '../Data/128_logs/tfdh_twin_iterative_logs/train_logs/'
-    testLogDirBase = '../Data/128_logs/tfdh_twin_iterative_logs/test_logs/'
+    trainLogDirBase = '../Data/128_logs/tfdh_iterative_logs/train_logs/'
+    testLogDirBase = '../Data/128_logs/tfdh_iterative_logs/test_logs/'
 
     # Iterative model only changes the wayoutput is written, 
     # so any model can be used by ease
@@ -490,10 +494,10 @@ def write_iterative():
 ####################################################################################
 
 
-def write_twin_residual():
+def write_residual():
     # Twin Correlation Matching Common Parameters
-    trainLogDirBase = '../Data/128_logs/tfdh_twin_residual_logs/train_logs/'
-    testLogDirBase = '../Data/128_logs/tfdh_twin_residual_logs/test_logs/'
+    trainLogDirBase = '../Data/128_logs/tfdh_residual_logs/train_logs/'
+    testLogDirBase = '../Data/128_logs/tfdh_residual_logs/test_logs/'
 
     data['modelName'] = 'twin_cnn_res_4p4l2f'
 
