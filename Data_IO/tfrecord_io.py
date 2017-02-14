@@ -13,7 +13,7 @@ import tensorflow as tf
 def _int64_feature(value):
     return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
-def _int64_nparray(value):
+def _int64_array(value):
     return tf.train.Feature(int64_list=tf.train.Int64List(value=value))
 
 def _bytes_feature(value):
@@ -120,7 +120,7 @@ def tfrecord_writer(imgPatchOrig, imgPatchPert, HAB, tfRecordFolder, tfFileName,
     #print('Writing', filename)
     writer = tf.python_io.TFRecordWriter(tfRecordPath)
     example = tf.train.Example(features=tf.train.Features(feature={
-        'fileID': _int64_nparray(fileID),
+        'fileID': _int64_array(fileID),
         'height': _int64_feature(rows),
         'width': _int64_feature(cols),
         'depth': _int64_feature(depth),

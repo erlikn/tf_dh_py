@@ -59,7 +59,7 @@ def perturb_writer( ID, idx,
     #        writer.writerow(pOrig)
     # Tensorflow record
     filename = str(ID) + "_" + str(idx) +".tfrecords"
-    fileID = np.asarray([ID, idx])
+    fileID = [ID, idx]
     tfrecord_io.tfrecord_writer(imgPatchOrig, imgPatchPert, HAB, tfRecFolder, filename, fileID)
     
     #imgOp = image_process_subMean_divStd(imgPatchOrig)
@@ -146,10 +146,11 @@ def prepare_dataset(datasetType, readFolder, tfRecFolder):
             totalCount = totalCount + (num)
         else:
             print("Not a grayscale")
-        if math.floor((i*50)/len(filenames)) != math.floor(((i-1)*50)/len(filenames)):
-            print(str(math.floor((i*100)/len(filenames)))+'%  '+str(i))
+        if math.floor((id*50)/len(filenames)) != math.floor(((id-1)*50)/len(filenames)):
+            print(str(math.floor((id*100)/len(filenames)))+'%  '+str(id))
             print('Perturbation Statistics: MuXY = %.1f, %.1f , VarXY = %.1f, %.1f , Files = %d' % (mu[0], mu[1], var[0], var[1], totalCount))
         id = id+1
+    i=id
     print('100%  Done')
     print('Perturbation Statistics: Average MuXY = %.1f, %.1f , VarXY = %.1f, %.1f , Files = %d' % (tMu[0]/i, tMu[1]/i, tVar[0]/i, tVar[1]/i, totalCount))
     print('Perturbation Statistics: Average MuXY = %.1f       , VarXY = %.1f ' % (np.linalg.norm(tMu/i), np.linalg.norm(tVar/i)))
@@ -186,15 +187,15 @@ def divide_train_test(readFolder, trainFolder, testFolder):
 
 
 
-dataRead = "../Data/MSCOCO_orig/"
-dataReadGray = "../Data/MSCOCO_gray/"
+dataRead = "../../Data/MSCOCO_orig/"
+dataReadGray = "../../Data/MSCOCO_gray/"
 
-train320 = "../Data/320_240_train/"
-traintfRecordFLD = "../Data/128_train_tfrecords/"
+train320 = "../../Data/320_240_train/"
+traintfRecordFLD = "../../Data/128_train_tfrecords/"
 
 
-test640 = "../Data/640_480_test/"
-testtfRecordFLD = "../Data/128_test_tfrecords/"
+test640 = "../../Data/640_480_test/"
+testtfRecordFLD = "../../Data/128_test_tfrecords/"
 
 """ Divide dataset (87XXXX) to (5000) test and (82XXX) training samples"""
 #divide_train_test(dataReadGray, train320, test640)
@@ -204,10 +205,10 @@ testtfRecordFLD = "../Data/128_test_tfrecords/"
     generate 5,000x5=25,000 Samples
     Total Files = 25,000 orig + 25,000 pert + 25,000 origSq 25,000 HAB = 100,000 
 """
-prepare_dataset("test", test640, testtfRecordFLD)
+#prepare_dataset("test", test640, testtfRecordFLD)
 """
     Generate more Train Samples
     generate  Samples
     Total Files =  orig +  pert + 25,000 HAB = 
 """
-#prepare_dataset("train", train320, traintfRecordFLD)
+prepare_dataset("train", train320, traintfRecordFLD)
