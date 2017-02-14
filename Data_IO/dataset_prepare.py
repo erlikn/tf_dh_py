@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import csv
 import tensorflow as tf
 
-import Data_IO.tfrecord_io as tfrecord_io
+import tfrecord_io
 
 # Global Variables
 NUM_OF_TEST_PERTURBED_IMAGES = 5
@@ -58,7 +58,7 @@ def perturb_writer( ID, idx,
     #    else:
     #        writer.writerow(pOrig)
     # Tensorflow record
-    filename = str(ID) + "_" + str(idx) +".tfrecords")
+    filename = str(ID) + "_" + str(idx) +".tfrecords"
     fileID = np.asarray([ID, idx])
     tfrecord_io.tfrecord_writer(imgPatchOrig, imgPatchPert, HAB, tfRecFolder, filename, fileID)
     

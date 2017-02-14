@@ -125,7 +125,7 @@ def batch_norm(name, tensorConv, dtype):
     return batchNorm
     
 
-def twin_correlation(name, prevLayerOut, prevLayerDims, d, s2, **kwargs):
+def twin_correlation(name, prevLayerOut, prevLayerDim, d, s2, **kwargs):
     dtype = tf.float16 if kwargs.get('usefp16') else tf.float32
 
     D = (2*d)+1
@@ -133,7 +133,7 @@ def twin_correlation(name, prevLayerOut, prevLayerDims, d, s2, **kwargs):
     # Input from Twin network -> numParallelModules = 2
     # Split tensor through last dimension into numParallelModules tensors
     prevLayerOut = tf.split(3, numParallelModules, prevLayerOut)
-    prevLayerIndivDims = prevLayerDims / numParallelModules
+    prevLayerIndivDims = prevLayerDim / numParallelModules
 
     # f1 is a list of size batchSize,x,y of [1,1,c,1] tensors  => last 1 is for the output size
     prevLayerOut[0] = tf.unpack(prevLayerOut[0], axis=0) # batches seperate
@@ -186,13 +186,12 @@ def twin_correlation(name, prevLayerOut, prevLayerDims, d, s2, **kwargs):
     #return resultTensor
     return resultBatch, D*D
 
-
-def conv_fire_parallel_module(name, prevLayerOut, prevLayerDims, fireDimsSingleModule, wd=None, **kwargs):
+def conv_fire_parallel_residual_module(name, prevLayerOut, prevLayerDim, historicLayerOut, historicLayerDim, fireDimsSingleModule, wd=None, **kwargs):
     """
     Input Args:
         name:               scope name
         prevLayerOut:       output tensor of previous layer
-        prevLayerDims:      size of the last (3rd) dimension in prevLayerOut
+        prevLayerDim:      size of the last (3rd) dimension in prevLayerOut
         numParallelModules: number of parallel modules and parallel data in prevLayerOut
         fireDimsSingleModule:     number of output dimensions for each parallel module
     """
@@ -200,12 +199,28 @@ def conv_fire_parallel_module(name, prevLayerOut, prevLayerDims, fireDimsSingleM
     dtype = tf.float16 if USE_FP_16 else tf.float32
 
     existingParams = kwargs.get('existingParams')
-
+    
     numParallelModules = kwargs.get('numParallelModules') # 2
     # Twin network -> numParallelModules = 2
     # Split tensor through last dimension into numParallelModules tensors
     prevLayerOut = tf.split(3, numParallelModules, prevLayerOut)
-    prevLayerIndivDims = prevLayerDims / numParallelModules
+    prevLayerIndivDims = prevLayerDim / numParallelModules
+
+    historicLayerOut = tf.split(3, numParallelModules, historicLayerOut)
+    historicLayerIndivDim = historicLayerDim / numParallelModules
+
+    # output depth of the convolution should be same as historic
+    if numParallelModules*fireDimsSingleModule['cnn3x3'] != historicLayerDim:
+        # TO DO
+        if kwargs.get('residualPadding') == "conv":
+            for prl in range(numParallelModules):
+                # convlove historic data with a kernel of 1x1 and output size of prevLayerDim
+                historicLayerOut[prl] = historicLayerOut[prl]
+        if kwargs.get('residualPadding') == "zeroPad":
+            for prl in range(numParallelModules):
+                # zero pad current historicLayerOut to the size of prevLayerDim
+                historicLayerOut[prl] = historicLayerOut[prl]
+
 
     with tf.variable_scope(name):
         with tf.variable_scope('cnn3x3') as scope:
@@ -232,20 +247,94 @@ def conv_fire_parallel_module(name, prevLayerOut, prevLayerDims, fireDimsSingleM
                                                  trainable=kwargs.get('tuneExistingWeights') if (existingParams is not None and 
                                                                                            layerName in existingParams) else True)
             
+            if existingParams is not None and layerName in existingParams:
+                biases = tf.get_variable('biases',
+                                         initializer=existingParams[layerName]['biases'], 
+                                         dtype=dtype)
+            else:
+                biases = tf.get_variable('biases', [fireDimsSingleModule['cnn3x3']],
+                                         initializer=tf.constant_initializer(0.0),
+                                         dtype=dtype)
+
+            for prl in range(numParallelModules):
+                conv = tf.nn.conv2d(prevLayerOut[prl], kernel, [1, 1, 1, 1], padding='SAME')
+
+                if kwargs.get('weightNorm'):
+                    # calc weight norm
+                    conv = batch_norm('weight_norm', conv, dtype)
+
+                bias = tf.nn.bias_add(conv, biases)
+                convReluPrl = tf.nn.relu(historicLayerOut[prl]+conv, name=scope.name)
+                # Concatinate results along last dimension to get one output tensor
+                if prl is 0:
+                    convRelu = convReluPrl
+                else:
+                    convRelu = tf.concat(3, [convRelu, convReluPrl])
+
+            _activation_summary(convRelu)
+
+    return convRelu, numParallelModules*fireDimsSingleModule['cnn3x3']
+
+def conv_fire_parallel_module(name, prevLayerOut, prevLayerDim, fireDimsSingleModule, wd=None, **kwargs):
+    """
+    Input Args:
+        name:               scope name
+        prevLayerOut:       output tensor of previous layer
+        prevLayerDim:       size of the last (3rd) dimension in prevLayerOut
+        numParallelModules: number of parallel modules and parallel data in prevLayerOut
+        fireDimsSingleModule:     number of output dimensions for each parallel module
+    """
+    USE_FP_16 = kwargs.get('usefp16')
+    dtype = tf.float16 if USE_FP_16 else tf.float32
+
+    existingParams = kwargs.get('existingParams')
+
+    numParallelModules = kwargs.get('numParallelModules') # 2
+    # Twin network -> numParallelModules = 2
+    # Split tensor through last dimension into numParallelModules tensors
+    prevLayerOut = tf.split(3, numParallelModules, prevLayerOut)
+    prevLayerIndivDims = prevLayerDim / numParallelModules
+
+    with tf.variable_scope(name):
+        with tf.variable_scope('cnn3x3') as scope:
+            layerName = scope.name.replace("/", "_")
+            #kernel = _variable_with_weight_decay('weights',
+            #                                     shape=[3, 3, prevLayerIndivDims, fireDimsSingleModule['cnn3x3']],
+            #                                     initializer=existingParams[layerName]['weights'] if (existingParams is not None and
+            #                                                                                         layerName in existingParams) else
+            #                                                    (tf.contrib.layers.xavier_initializer_conv2d() if kwargs.get('phase')=='train' else
+            #                                                     tf.constant_initializer(0.0, dtype=dtype)),
+            #                                     dtype=dtype,
+            # wd=wd,
+            #                                     trainable=kwargs.get('tuneExistingWeights') if (existingParams is not None and 
+            #                                                                               layerName in existingParams) else True)
+            stddev = np.sqrt(2/np.prod(prevLayerOut[0].get_shape().as_list()[1:]))
+            kernel = _variable_with_weight_decay('weights',
+                                                 shape=[3, 3, prevLayerIndivDims, fireDimsSingleModule['cnn3x3']],
+                                                 initializer=existingParams[layerName]['weights'] if (existingParams is not None and
+                                                                                                     layerName in existingParams) else
+                                                                (tf.random_normal_initializer(stddev=stddev) if kwargs.get('phase')=='train' else
+                                                                 tf.constant_initializer(0.0, dtype=dtype)),
+                                                 dtype=dtype,
+                                                 wd=wd,
+                                                 trainable=kwargs.get('tuneExistingWeights') if (existingParams is not None and 
+                                                                                           layerName in existingParams) else True)
+            
+            if existingParams is not None and layerName in existingParams:
+                biases = tf.get_variable('biases',
+                                         initializer=existingParams[layerName]['biases'], 
+                                         dtype=dtype)
+            else:
+                biases = tf.get_variable('biases', [fireDimsSingleModule['cnn3x3']],
+                                         initializer=tf.constant_initializer(0.0),
+                                         dtype=dtype)
+
             for prl in range(numParallelModules):
                 conv = tf.nn.conv2d(prevLayerOut[prl], kernel, [1, 1, 1, 1], padding='SAME')
                 
                 if kwargs.get('weightNorm'):
                     # calc weight norm
                     conv = batch_norm('weight_norm', conv, dtype)
-                
-                if existingParams is not None and layerName in existingParams:
-                    biases = tf.get_variable('biases',
-                                             initializer=existingParams[layerName]['biases'], dtype=dtype)
-                else:
-                    biases = tf.get_variable('biases', [fireDimsSingleModule['cnn3x3']],
-                                             initializer=tf.constant_initializer(0.0),
-                                             dtype=dtype)
 
                 bias = tf.nn.bias_add(conv, biases)
                 convReluPrl = tf.nn.relu(conv, name=scope.name)
@@ -259,56 +348,6 @@ def conv_fire_parallel_module(name, prevLayerOut, prevLayerDims, fireDimsSingleM
 
     return convRelu, numParallelModules*fireDimsSingleModule['cnn3x3']
 
-def conv_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwargs):
-    USE_FP_16 = kwargs.get('usefp16')
-    dtype = tf.float16 if USE_FP_16 else tf.float32
-    
-    existingParams = kwargs.get('existingParams')
-    
-    with tf.variable_scope(name):
-        with tf.variable_scope('cnn3x3') as scope:
-            layerName = scope.name.replace("/", "_")
-            #kernel = _variable_with_weight_decay('weights',
-            #                                     shape=[3, 3, prevLayerDim, fireDims['cnn3x3']],
-            #                                     initializer=existingParams[layerName]['weights'] if (existingParams is not None and
-            #                                                                                         layerName in existingParams) else
-            #                                                    (tf.contrib.layers.xavier_initializer_conv2d() if kwargs.get('phase')=='train' else
-            #                                                     tf.constant_initializer(0.0, dtype=dtype)),
-            #                                     dtype=dtype,
-            # wd=wd,
-            #                                     trainable=kwargs.get('tuneExistingWeights') if (existingParams is not None and 
-            #                                                                               layerName in existingParams) else True)
-            stddev = np.sqrt(2/np.prod(prevLayerOut.get_shape().as_list()[1:]))
-            kernel = _variable_with_weight_decay('weights',
-                                                 shape=[3, 3, prevLayerDim, fireDims['cnn3x3']],
-                                                 initializer=existingParams[layerName]['weights'] if (existingParams is not None and
-                                                                                                     layerName in existingParams) else
-                                                                (tf.random_normal_initializer(stddev=stddev) if kwargs.get('phase')=='train' else
-                                                                 tf.constant_initializer(0.0, dtype=dtype)),
-                                                 dtype=dtype,
-                                                 wd=wd,
-                                                 trainable=kwargs.get('tuneExistingWeights') if (existingParams is not None and 
-                                                                                           layerName in existingParams) else True)
-            conv = tf.nn.conv2d(prevLayerOut, kernel, [1, 1, 1, 1], padding='SAME')
-
-            if kwargs.get('weightNorm'):
-                # calc weight norm
-                conv = batch_norm('weight_norm', conv, dtype)
-
-            if existingParams is not None and layerName in existingParams:
-                biases = tf.get_variable('biases',
-                                         initializer=existingParams[layerName]['biases'], dtype=dtype)
-            else:
-                biases = tf.get_variable('biases', [fireDims['cnn3x3']],
-                                         initializer=tf.constant_initializer(0.0),
-                                         dtype=dtype)
-
-            conv = tf.nn.bias_add(conv, biases)
-            convRelu = tf.nn.relu(conv, name=scope.name)
-            _activation_summary(convRelu)
-
-        return convRelu, fireDims['cnn3x3']
-        
 def conv_fire_residual_module(name, prevLayerOut, prevLayerDim, historicLayerOut, historicLayerDim, fireDims, wd=None, **kwargs):
     USE_FP_16 = kwargs.get('usefp16')
     dtype = tf.float16 if USE_FP_16 else tf.float32
@@ -360,6 +399,57 @@ def conv_fire_residual_module(name, prevLayerOut, prevLayerDim, historicLayerOut
             _activation_summary(convRelu)
 
         return convRelu, fireDims['cnn3x3']
+
+def conv_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwargs):
+    USE_FP_16 = kwargs.get('usefp16')
+    dtype = tf.float16 if USE_FP_16 else tf.float32
+    
+    existingParams = kwargs.get('existingParams')
+    
+    with tf.variable_scope(name):
+        with tf.variable_scope('cnn3x3') as scope:
+            layerName = scope.name.replace("/", "_")
+            #kernel = _variable_with_weight_decay('weights',
+            #                                     shape=[3, 3, prevLayerDim, fireDims['cnn3x3']],
+            #                                     initializer=existingParams[layerName]['weights'] if (existingParams is not None and
+            #                                                                                         layerName in existingParams) else
+            #                                                    (tf.contrib.layers.xavier_initializer_conv2d() if kwargs.get('phase')=='train' else
+            #                                                     tf.constant_initializer(0.0, dtype=dtype)),
+            #                                     dtype=dtype,
+            # wd=wd,
+            #                                     trainable=kwargs.get('tuneExistingWeights') if (existingParams is not None and 
+            #                                                                               layerName in existingParams) else True)
+            stddev = np.sqrt(2/np.prod(prevLayerOut.get_shape().as_list()[1:]))
+            kernel = _variable_with_weight_decay('weights',
+                                                 shape=[3, 3, prevLayerDim, fireDims['cnn3x3']],
+                                                 initializer=existingParams[layerName]['weights'] if (existingParams is not None and
+                                                                                                     layerName in existingParams) else
+                                                                (tf.random_normal_initializer(stddev=stddev) if kwargs.get('phase')=='train' else
+                                                                 tf.constant_initializer(0.0, dtype=dtype)),
+                                                 dtype=dtype,
+                                                 wd=wd,
+                                                 trainable=kwargs.get('tuneExistingWeights') if (existingParams is not None and 
+                                                                                           layerName in existingParams) else True)
+            conv = tf.nn.conv2d(prevLayerOut, kernel, [1, 1, 1, 1], padding='SAME')
+
+            if kwargs.get('weightNorm'):
+                # calc weight norm
+                conv = batch_norm('weight_norm', conv, dtype)
+
+            if existingParams is not None and layerName in existingParams:
+                biases = tf.get_variable('biases',
+                                         initializer=existingParams[layerName]['biases'], dtype=dtype)
+            else:
+                biases = tf.get_variable('biases', [fireDims['cnn3x3']],
+                                         initializer=tf.constant_initializer(0.0),
+                                         dtype=dtype)
+
+            conv = tf.nn.bias_add(conv, biases)
+            convRelu = tf.nn.relu(conv, name=scope.name)
+            _activation_summary(convRelu)
+
+        return convRelu, fireDims['cnn3x3']
+        
 
 def fc_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwargs):
     USE_FP_16 = kwargs.get('usefp16')
@@ -431,11 +521,11 @@ def loss(pred, tval, lossType):
 
 def train(loss, globalStep, **kwargs):
     if kwargs.get('optimizer') == 'MomentumOptimizer':
-        optimizerParams = optimizer_params.get_momentum_optimizer_params(kwargs)
+        optimizerParams = optimizer_params.get_momentum_optimizer_params(globalStep, **kwargs)
     if kwargs.get('optimizer') == 'AdamOptimizer':
-        optimizerParams = optimizer_params.get_adam_optimizer_params(kwargs)
+        optimizerParams = optimizer_params.get_adam_optimizer_params(globalStep, **kwargs)
     if kwargs.get('optimizer') == 'GradientDescentOptimizer':
-        optimizerParams = optimizer_params.get_gradient_descent_optimizer_params(kwargs)
+        optimizerParams = optimizer_params.get_gradient_descent_optimizer_params(globalStep, **kwargs)
 
     # Generate moving averages of all losses and associated summaries.
     lossAveragesOp = loss_base._add_loss_summaries(loss, kwargs.get('activeBatchSize', None))
