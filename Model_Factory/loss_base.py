@@ -18,7 +18,7 @@ def _add_loss_summaries(total_loss, batchSize):
     loss_averages_op = loss_averages.apply(losses + [total_loss])
 
     # Individual average loss
-    lossPixelIndividual = tf.sqrt(tf.mul(total_loss, 2/(batchSize*8)))
+    lossPixelIndividual = tf.sqrt(tf.multiply(total_loss, 2/(batchSize*8)))
     tf.summary.scalar('Average_Pixel_Error', lossPixelIndividual)
 
     # Attach a scalar summary to all individual losses and the total loss; do the
@@ -47,11 +47,11 @@ def _l2_loss(pred, tval): # batchSize=Sne
     #if not batch_size:
     #    batch_size = kwargs.get('train_batch_size')
     
-    #l1_loss = tf.abs(tf.sub(logits, HAB), name="abs_loss")
+    #l1_loss = tf.abs(tf.subtract(logits, HAB), name="abs_loss")
     #l1_loss_mean = tf.reduce_mean(l1_loss, name='abs_loss_mean')
     #tf.add_to_collection('losses', l2_loss_mean)
 
-    l2_loss = tf.nn.l2_loss(tf.sub(pred, tval), name="l2_loss")
+    l2_loss = tf.nn.l2_loss(tf.subtract(pred, tval), name="l2_loss")
     tf.add_to_collection('losses', l2_loss)
 
     #l2_loss_mean = tf.reduce_mean(l2_loss, name='l2_loss_mean')

@@ -103,7 +103,7 @@ def _variable_with_weight_decay(name, shape, initializer, dtype, wd, trainable=T
     else:
         var = tf.get_variable(name, shape, initializer=initializer, dtype=dtype, trainable=trainable)
     #if wd is not None:
-    #    weight_decay = tf.mul(tf.nn.l2_loss(var), wd, name='weight_loss')
+    #    weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
     #    tf.add_to_collection('losses', weight_decay)
         
     return var
@@ -132,22 +132,23 @@ def twin_correlation(name, prevLayerOut, prevLayerDim, d, s2, **kwargs):
     numParallelModules = kwargs.get('numParallelModules') # 2
     # Input from Twin network -> numParallelModules = 2
     # Split tensor through last dimension into numParallelModules tensors
-    prevLayerOut = tf.split(3, numParallelModules, prevLayerOut)
+    prevLayerOut = tf.split(prevLayerOut, num_or_size_splits=numParallelModules, axis=3)
     prevLayerIndivDims = prevLayerDim / numParallelModules
 
     # f1 is a list of size batchSize,x,y of [1,1,c,1] tensors  => last 1 is for the output size
-    prevLayerOut[0] = tf.unpack(prevLayerOut[0], axis=0) # batches seperate
+    prevLayerOut[0] = tf.split(prevLayerOut[0], num_or_size_splits=kwargs.get('activeBatchSize'), axis=0) # batches seperate
+
     for i in range(len(prevLayerOut[0])):
-        prevLayerOut[0][i] = tf.split(0, prevLayerOut[0][i].get_shape()[0], prevLayerOut[0][i]) # X seperate
+        prevLayerOut[0][i] = tf.split(prevLayerOut[0][i], prevLayerOut[0][i].get_shape()[0], axis=0) # X seperate
         for j in range(len(prevLayerOut[0][i])):
-            prevLayerOut[0][i][j] = tf.split(1, prevLayerOut[0][i][j].get_shape()[1], prevLayerOut[0][i][j]) # Y seperate
+            prevLayerOut[0][i][j] = tf.split(prevLayerOut[0][i][j], prevLayerOut[0][i][j].get_shape()[1], axis=1) # Y seperate
             for k in range(len(prevLayerOut[0][i][j])):
                 prevLayerOut[0][i][j][k] = tf.reshape(prevLayerOut[0][i][j][k], [1, 1, int(prevLayerOut[0][i][j][k].get_shape()[2]), 1])
                 prevLayerOut[0][i][j][k].set_shape([1, 1, int(prevLayerOut[0][i][j][k].get_shape()[2]), 1])
 
     # padd f2 with 20 zeros on each side
     # output is batch x [1, x+2d, y+2d, c]
-    prevLayerOut[1] = tf.split(0, prevLayerOut[1].get_shape()[0], prevLayerOut[1]) # batches seperate
+    prevLayerOut[1] = tf.split(prevLayerOut[1], prevLayerOut[1].get_shape()[0], axis=0) # batches seperate
     for i in range(len(prevLayerOut[1])):
         prevLayerOut[1][i] = tf.pad(prevLayerOut[1][i], [[0,0],[d,d],[d,d],[0,0]], mode='CONSTANT', name=None)
 
@@ -172,17 +173,17 @@ def twin_correlation(name, prevLayerOut, prevLayerDim, d, s2, **kwargs):
                         if j == 0:
                             corrBox = corrSingle
                         else:
-                            corrBox = tf.concat(2, [corrBox, corrSingle])
+                            corrBox = tf.concat([corrBox, corrSingle], axis=2)
                     # concat along width dimension
                     if i == 0:
                         resultTensor = corrBox
                     else:
-                        resultTensor = tf.concat(1, [resultTensor, corrBox])
+                        resultTensor = tf.concat([resultTensor, corrBox], axis=1)
                 # concat along batches
                 if batches == 0:
                     resultBatch = resultTensor
                 else:
-                    resultBatch = tf.concat(0, [resultBatch, resultTensor])
+                    resultBatch = tf.concat([resultBatch, resultTensor], axis=0)
     #return resultTensor
     return resultBatch, D*D
 
@@ -203,10 +204,10 @@ def conv_fire_parallel_residual_module(name, prevLayerOut, prevLayerDim, histori
     numParallelModules = kwargs.get('numParallelModules') # 2
     # Twin network -> numParallelModules = 2
     # Split tensor through last dimension into numParallelModules tensors
-    prevLayerOut = tf.split(3, numParallelModules, prevLayerOut)
+    prevLayerOut = tf.split(prevLayerOut, numParallelModules, axis=3)
     prevLayerIndivDims = prevLayerDim / numParallelModules
 
-    historicLayerOut = tf.split(3, numParallelModules, historicLayerOut)
+    historicLayerOut = tf.split(historicLayerOut, numParallelModules, axis=3)
     historicLayerIndivDim = historicLayerDim / numParallelModules
 
     # output depth of the convolution should be same as historic
@@ -269,7 +270,7 @@ def conv_fire_parallel_residual_module(name, prevLayerOut, prevLayerDim, histori
                 if prl is 0:
                     convRelu = convReluPrl
                 else:
-                    convRelu = tf.concat(3, [convRelu, convReluPrl])
+                    convRelu = tf.concat([convRelu, convReluPrl], axis=3)
 
             _activation_summary(convRelu)
 
@@ -292,7 +293,7 @@ def conv_fire_parallel_module(name, prevLayerOut, prevLayerDim, fireDimsSingleMo
     numParallelModules = kwargs.get('numParallelModules') # 2
     # Twin network -> numParallelModules = 2
     # Split tensor through last dimension into numParallelModules tensors
-    prevLayerOut = tf.split(3, numParallelModules, prevLayerOut)
+    prevLayerOut = tf.split(prevLayerOut, numParallelModules, axis=3)
     prevLayerIndivDims = prevLayerDim / numParallelModules
 
     with tf.variable_scope(name):
@@ -331,7 +332,7 @@ def conv_fire_parallel_module(name, prevLayerOut, prevLayerDim, fireDimsSingleMo
 
             for prl in range(numParallelModules):
                 conv = tf.nn.conv2d(prevLayerOut[prl], kernel, [1, 1, 1, 1], padding='SAME')
-                
+
                 if kwargs.get('weightNorm'):
                     # calc weight norm
                     conv = batch_norm('weight_norm', conv, dtype)
@@ -341,8 +342,8 @@ def conv_fire_parallel_module(name, prevLayerOut, prevLayerDim, fireDimsSingleMo
                 # Concatinate results along last dimension to get one output tensor
                 if prl is 0:
                     convRelu = convReluPrl
-                else:    
-                    convRelu = tf.concat(3, [convRelu, convReluPrl])
+                else:
+                    convRelu = tf.concat([convRelu, convReluPrl], axis=3)
 
             _activation_summary(convRelu)
 

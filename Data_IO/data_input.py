@@ -97,7 +97,7 @@ def image_preprocessing(image, **kwargs):
     meanChannels, stdChannels = tf.nn.moments(image, axes=[0, 1]) # 128x128x2 => [meanChannel1 meanChannel2]
     # SUBTRACT MEAN
     meanChannels = tf.reshape(meanChannels, [1,1,-1]) # prepare for channel based subtraction
-    imagenorm = tf.sub(image, meanChannels)
+    imagenorm = tf.subtract(image, meanChannels)
     # DIVIDE BY STANDARD DEVIATION
     stdChannels = tf.reshape(stdChannels, [1,1,-1]) # prepare for channel based scalar division
     stdChannels = tf.cond(tf.reduce_all(tf.not_equal(stdChannels,tf.zeros_like(stdChannels))),
@@ -107,7 +107,7 @@ def image_preprocessing(image, **kwargs):
     # SCALE TO [-1,1]
     maxChannels = tf.reduce_max(imagenorm, [0,1])
     minChannels = tf.reduce_min(imagenorm, [0,1])
-    maxminDif = tf.sub(maxChannels, minChannels)
+    maxminDif = tf.subtract(maxChannels, minChannels)
     maxminSum = tf.add(maxChannels, minChannels)
     maxminDif = tf.reshape(maxminDif, [1,1,-1])
     maxminSum = tf.reshape(maxminSum, [1,1,-1])
@@ -115,7 +115,7 @@ def image_preprocessing(image, **kwargs):
     maxminDif = tf.cond(tf.reduce_all(tf.not_equal(maxminDif,tf.zeros_like(maxminDif))),
                                       lambda: maxminDif, 
                                       lambda: tf.ones_like(maxminDif))
-    imagenorm = tf.div(tf.sub(tf.mul(coef,imagenorm), maxminSum), maxminDif) # ((2*x)-(max+min))/(max-min)
+    imagenorm = tf.div(tf.subtract(tf.multiply(coef,imagenorm), maxminSum), maxminDif) # ((2*x)-(max+min))/(max-min)
     return imagenorm
 
 def fetch_inputs(numPreprocessThreads=None, numReaders=1, **kwargs):
@@ -234,9 +234,10 @@ def fetch_inputs(numPreprocessThreads=None, numReaders=1, **kwargs):
         batchImage = tf.cast(batchImage, tf.float32)
 
         # Display the training images in the visualizer.
-        images = tf.unpack(batchImage, axis=3)
-        image0 = tf.reshape(images[0], [batchSize, 128, 128, 1])
-        image1 = tf.reshape(images[1], [batchSize, 128, 128, 1])
+
+        image0, image1 = tf.split(batchImage, [1, 1], axis=3)
+        #image0 = tf.reshape(images[0], [batchSize, 128, 128, 1])
+        #image1 = tf.reshape(images[1], [batchSize, 128, 128, 1])
 
         tf.summary.image('imagesOrig', image0)
         tf.summary.image('imagesPert', image1)

@@ -107,7 +107,7 @@ def _variable_with_weight_decay(name, shape, initializer, wd, trainable=True):
     else:
         var = tf.get_variable(name, shape, initializer=initializer, dtype=dtype, trainable=trainable)
     #if wd is not None:
-    #    weight_decay = tf.mul(tf.nn.l2_loss(var), wd, name='weight_loss')
+    #    weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
     #    tf.add_to_collection('losses', weight_decay)
         
     return var
@@ -353,11 +353,11 @@ def loss(pHAB, tHAB, **kwargs): # batchSize=Sne
     #if not batch_size:
     #    batch_size = kwargs.get('train_batch_size')
     
-    #l1_loss = tf.abs(tf.sub(logits, HAB), name="abs_loss")
+    #l1_loss = tf.abs(tf.subtract(logits, HAB), name="abs_loss")
     #l1_loss_mean = tf.reduce_mean(l1_loss, name='abs_loss_mean')
     #tf.add_to_collection('losses', l2_loss_mean)
     
-    l2_loss = tf.nn.l2_loss(tf.sub(pHAB, tHAB), name="l2_loss")
+    l2_loss = tf.nn.l2_loss(tf.subtract(pHAB, tHAB), name="l2_loss")
     l2_loss_mean = tf.reduce_mean(l2_loss, name='l2_loss_mean')
     tf.add_to_collection('losses', l2_loss_mean)
 
@@ -397,7 +397,7 @@ def _add_loss_summaries(total_loss, batchSize):
     loss_averages_op = loss_averages.apply(losses + [total_loss])
 
     # Individual average loss
-    lossPixelIndividual = tf.sqrt(tf.mul(total_loss, 2/(batchSize*8)))
+    lossPixelIndividual = tf.sqrt(tf.multiply(total_loss, 2/(batchSize*8)))
     tf.summary.scalar('Average_Pixel_Error', lossPixelIndividual)
 
     # Attach a scalar summary to all individual losses and the total loss; do the

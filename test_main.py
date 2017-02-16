@@ -113,7 +113,9 @@ def test():
 
         opCheck = tf.add_check_numerics_ops()
         # Start running operations on the Graph.
-        sess = tf.Session(config=tf.ConfigProto(log_device_placement=modelParams['logDevicePlacement']))
+        config = tf.ConfigProto(log_device_placement=modelParams['logDevicePlacement'])
+        config.graph_options.optimizer_options.global_jit_level = tf.OptimizerOptions.ON_1
+        sess = tf.Session(config = config)
         #sess = tf_debug.LocalCLIDebugWrapperSession(sess)
         #sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
         sess.run(init)
