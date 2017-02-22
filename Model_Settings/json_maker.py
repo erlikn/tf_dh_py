@@ -37,7 +37,12 @@ warpOriginalImage_desc = "Flag to warp whole original image to produce pert or j
 imageHeight_desc = "Image Height"
 imageWidth_desc = "Image Width"
 imageChannels_desc = "Image channels"
-imageOrigChannels_desc = "Original Image Channels"
+imageTrnOrigHeight_desc = "train original image height"
+imageTrnOrigWidth_desc = "train original image width"
+imageTrnOrigChannels_desc = "train original image channels"
+imageTstOrigHeight_desc = "test original image height"
+imageTstOrigWidth_desc = "test original image width"
+imageTstOrigChannels_desc = "test original image channels"
 outputSize_desc = "Final output size"
 modelShape_desc = "Network model with 8 convolutional layers with 2 fully connected layers"
 numParallelModules_desc = "Number of parallel modules of the network"
@@ -79,7 +84,12 @@ warpOriginalImage = True
 imageHeight = 128
 imageWidth = 128
 imageChannels = 2
-imageOrigChannels = 1
+imageTrnOrigHeight = 240
+imageTrnOrigWidth = 320
+imageTrnOrigChannels = 1
+imageTstOrigHeight = 480
+imageTstOrigWidth = 640
+imageTstOrigChannels = 1
 outputSize = 8
 modelShape = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
 numParallelModules = 2
@@ -120,7 +130,12 @@ data = {'modelName' : modelName,
         'imageHeight' : imageHeight,
         'imageWidth' : imageWidth,
         'imageChannels' : imageChannels,
-        'imageOrigChannels' : imageOrigChannels,
+        'imageTrnOrigHeight' : imageTrnOrigHeight,
+        'imageTrnOrigWidth' : imageTrnOrigWidth,
+        'imageTrnOrigChannels' : imageTrnOrigChannels,
+        'imageTstOrigHeight' : imageTstOrigHeight,
+        'imageTstOrigWidth' : imageTstOrigWidth,
+        'imageTstOrigChannels' : imageTstOrigChannels,
         'outputSize' : outputSize,
         'modelShape' : modelShape,
         'numParallelModules' : numParallelModules,
@@ -162,6 +177,12 @@ data = {'modelName' : modelName,
         'imageHeight_desc' : imageHeight_desc,
         'imageWidth_desc' : imageWidth_desc,
         'imageChannels_desc' : imageChannels_desc,
+        'imageTrnOrigHeight_desc' : imageTrnOrigHeight_desc,
+        'imageTrnOrigWidth_desc' : imageTrnOrigWidth_desc,
+        'imageTrnOrigChannels_desc' : imageTrnOrigChannels_desc,
+        'imageTstOrigHeight_desc' : imageTstOrigHeight_desc,
+        'imageTstOrigWidth_desc' : imageTstOrigWidth_desc,
+        'imageTstOrigChannels_desc' : imageTstOrigChannels_desc,
         'outputSize_desc' : outputSize_desc,
         'modelShape_desc' : modelShape_desc,
         'numParallelModules_desc' : numParallelModules_desc,

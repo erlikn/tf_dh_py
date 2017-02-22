@@ -61,7 +61,7 @@ def perturb_writer( ID, idx,
     filename = str(ID) + "_" + str(idx) +".tfrecords"
     fileID = [ID, idx]
     tfrecord_io.tfrecord_writer(imgOrig, imgPatchOrig, imgPatchPert, pOrig, HAB, tfRecFolder, filename, fileID)
-    
+
     #imgOp = image_process_subMean_divStd(imgPatchOrig)
     #imgPp = image_process_subMean_divStd(imgPatchPert)
     #tfrecord_writer(imgOp, imgPp, HAB, pOrig, tfRecFolder+filename)
@@ -114,7 +114,7 @@ def generate_random_perturbations(datasetType, img, ID, num, tfRecFolder):
             imgTempPert = cv2.resize(imgTempPert, (128,128))
             H_AB = H_AB/2
         perturb_writer(ID, i,
-                       img, imgTempOrig, imgTempPert, H_AB, pOrig,
+                       np.asarray(img), imgTempOrig, imgTempPert, H_AB, pOrig,
                        tfRecFolder)
         #mu = np.average(np.linalg.norm(H_AB, axis=0))
         #var = np.var(np.linalg.norm(H_AB, axis=0))
@@ -205,10 +205,10 @@ testtfRecordFLD = "../../Data/128_test_tfrecords/"
     generate 5,000x5=25,000 Samples
     Total Files = 25,000 orig + 25,000 pert + 25,000 origSq 25,000 HAB = 100,000 
 """
-prepare_dataset("test", test640, testtfRecordFLD)
+#prepare_dataset("test", test640, testtfRecordFLD)
 """
     Generate more Train Samples
     generate  Samples
     Total Files =  orig +  pert + 25,000 HAB = 
 """
-#prepare_dataset("train", train320, traintfRecordFLD)
+prepare_dataset("train", train320, traintfRecordFLD)

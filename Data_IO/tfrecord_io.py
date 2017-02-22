@@ -78,8 +78,8 @@ def parse_example_proto(exampleSerialized, **kwargs):
       HAB: Tensor tf.int32 containing the homography.
       pOrig: Tensor tf.int32 contating the origianl square points
     """
-    
-    featureMap ={
+
+    featureMap = {
         'fileID': tf.FixedLenFeature([2], dtype=tf.int64),
         'HAB': tf.FixedLenFeature([8], dtype=tf.float32),
         'pOrig': tf.FixedLenFeature([8], dtype=tf.float32),
@@ -89,14 +89,26 @@ def parse_example_proto(exampleSerialized, **kwargs):
     features = tf.parse_single_example(exampleSerialized, featureMap)
 
     fileID = features['fileID']
-    image = _decode_byte_image(features['image'], kwargs.get('imageHeight'), kwargs.get('imageWidth'), kwargs.get('imageChannels'))
-    imageOrig = _decode_byte_image(features['imageOrig'], kwargs.get('imageOrigHeight'), kwargs.get('imageOrigWidth'), kwargs.get('imageOrigChannels'))
+    image = _decode_byte_image(features['image'],
+                               kwargs.get('imageHeight'),
+                               kwargs.get('imageWidth'),
+                               kwargs.get('imageChannels'))
+    if kwargs.get('phase') == 'train':
+        imageOrig = _decode_byte_image(features['imageOrig'],
+                                       kwargs.get('imageTrnOrigHeight'),
+                                       kwargs.get('imageTrnOrigWidth'),
+                                       kwargs.get('imageTrnOrigChannels'))
+    else:
+        imageOrig = _decode_byte_image(features['imageOrig'],
+                                       kwargs.get('imageTstOrigHeight'),
+                                       kwargs.get('imageTstOrigWidth'),
+                                       kwargs.get('imageTstOrigChannels'))
     HAB = features['HAB']
     pOrig = features['pOrig']
 
     #validate_for_nan()
 
-    return image, HAB, fileID
+    return imageOrig, image, pOrig, HAB, fileID
 
 def tfrecord_writer(imageOrig, imgPatchOrig, imgPatchPert, pOrig, HAB, tfRecordFolder, tfFileName, fileID):
     """Converts a dataset to tfrecords."""
@@ -114,6 +126,7 @@ def tfrecord_writer(imageOrig, imgPatchOrig, imgPatchPert, pOrig, HAB, tfRecordF
 
     rows = imageOrig.shape[0]
     cols = imageOrig.shape[1]
+    print(imageOrig.shape)
     depth = 1
     flatImage = imageOrig.reshape(rows*cols*depth)
     flatImageOrigList = flatImage.tostring()
