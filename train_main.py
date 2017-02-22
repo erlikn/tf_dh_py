@@ -105,7 +105,7 @@ def train():
                                      trainable=False)
 
         # Get images and transformation for model_cnn.
-        images, tHAB, tfrecFilenames = data_input.inputs(**modelParams)
+        images, tHAB, tfrecFileIDs = data_input.inputs(**modelParams)
 
         # Build a Graph that computes the HAB predictions from the
         # inference model.

@@ -223,13 +223,13 @@ def fetch_inputs(numPreprocessThreads=None, numReaders=1, **kwargs):
         imagesHomographiesOrigsqrs = []
         for _ in range(numPreprocessThreads):
             # Parse a serialized Example proto to extract the image and metadata.
-            imageBuffer, HAB, tfrecFileIDs = tfrecord_io.parse_example_proto(exampleSerialized, **kwargs)
+            imageOrig, imageBuffer, pOrig, HAB, tfrecFileIDs = tfrecord_io.parse_example_proto(exampleSerialized, **kwargs)
             image = image_preprocessing(imageBuffer, **kwargs) # normalized between [-1,1]
-            imagesHomographiesOrigsqrs.append([image, HAB, tfrecFileIDs])
+            imagesHomographiesOrigsqrs.append([imageOrig, image, pOrig, HAB, tfrecFileIDs])
 
-        batchImage, batchHAB, batchTFrecFileIDs = tf.train.batch_join(imagesHomographiesOrigsqrs,
-                                                        batch_size=kwargs.get('activeBatchSize'),
-                                                        capacity=2 * numPreprocessThreads * batchSize)
+        batchImageOrig, batchImage, batchPOrig, batchHAB, batchTFrecFileIDs = tf.train.batch_join(imagesHomographiesOrigsqrs,
+                                                                batch_size=kwargs.get('activeBatchSize'),
+                                                                capacity=2 * numPreprocessThreads * batchSize)
 
         batchImage = tf.cast(batchImage, tf.float32)
 
@@ -242,7 +242,7 @@ def fetch_inputs(numPreprocessThreads=None, numReaders=1, **kwargs):
         tf.summary.image('imagesOrig', image0)
         tf.summary.image('imagesPert', image1)
 
-        return batchImage, batchHAB, batchTFrecFileIDs
+        return batchImageOrig, batchImage, batchPOrig, batchHAB, batchTFrecFileIDs
 
         # Read examples from files in the filename queue.
         #read_input = read_calusa_heatmap(filenameQueue)
@@ -262,10 +262,10 @@ def inputs(**kwargs):
       ValueError: If no dataDir
     """     
     with tf.device('/cpu:0'):
-        batchImage, batchHAB, tfrecFileID = fetch_inputs(**kwargs)
+        batchImageOrig, batchImage, batchPOrig, batchHAB, tfrecFileID = fetch_inputs(**kwargs)
         
         if kwargs.get('usefp16'):
             batchImage = tf.cast(batchImage, tf.float16)
             batchHAB = tf.cast(batchHAB, tf.float16)
 
-    return batchImage, batchHAB, tfrecFileID
+    return batchImageOrig, batchImage, batchPOrig, batchHAB, tfrecFileID

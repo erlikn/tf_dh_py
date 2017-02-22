@@ -32,10 +32,12 @@ numTestDatasetExamples_desc = "Number of images to process in test dataset"
 trainLogDir_desc = "Directory where to write train event logs and checkpoints"
 testLogDir_desc = "Directory where to write test event logs and checkpoints"
 wrapedImageFolderName_desc = "Directory where to write wrapped images"
+warpOriginalImage_desc = "Flag to warp whole original image to produce pert or just the patch"
 
 imageHeight_desc = "Image Height"
 imageWidth_desc = "Image Width"
 imageChannels_desc = "Image channels"
+imageOrigChannels_desc = "Original Image Channels"
 outputSize_desc = "Final output size"
 modelShape_desc = "Network model with 8 convolutional layers with 2 fully connected layers"
 numParallelModules_desc = "Number of parallel modules of the network"
@@ -72,10 +74,12 @@ numTestDatasetExamples = 25000
 trainLogDir = trainLogDirBase+'170127_TWN_MOM_W'
 testLogDir = testLogDirBase+'170127_TWN_MOM_W'
 wrapedImageFolderName = wrapedImageFolderNameBase+' '
+warpOriginalImage = True 
 
 imageHeight = 128
 imageWidth = 128
 imageChannels = 2
+imageOrigChannels = 1
 outputSize = 8
 modelShape = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
 numParallelModules = 2
@@ -111,10 +115,12 @@ data = {'modelName' : modelName,
         'trainLogDir' : trainLogDir,
         'testLogDir' : testLogDir,
         'wrapedImageFolderName' : wrapedImageFolderName,
+        'warpOriginalImage' : warpOriginalImage,
 
         'imageHeight' : imageHeight,
         'imageWidth' : imageWidth,
         'imageChannels' : imageChannels,
+        'imageOrigChannels' : imageOrigChannels,
         'outputSize' : outputSize,
         'modelShape' : modelShape,
         'numParallelModules' : numParallelModules,
@@ -151,7 +157,8 @@ data = {'modelName' : modelName,
         'trainLogDir_desc' : trainLogDir_desc,
         'testLogDir_desc' : testLogDir_desc,
         'wrapedImageFolderName' : wrapedImageFolderName_desc,
-        
+        'warpOriginalImage_desc' : warpOriginalImage_desc,
+
         'imageHeight_desc' : imageHeight_desc,
         'imageWidth_desc' : imageWidth_desc,
         'imageChannels_desc' : imageChannels_desc,
@@ -475,6 +482,7 @@ def write_iterative():
         data['trainLogDir'] = trainLogDirBase+'170208_ITR_B'
         data['testLogDir'] = testLogDirBase+'170208_ITR_B'
         data['wrapedImageFolderName'] = wrapedImageFolderNameBase + '170208_ITR_B'
+        data['warpOriginalImage'] = True
         data['trainMaxSteps'] = 90000
         data['numEpochsPerDecay'] = 30000.0
         data['trainBatchSize'] = 20

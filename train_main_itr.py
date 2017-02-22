@@ -30,7 +30,7 @@ import tensorflow as tf
 # import json_maker, update json files and read requested json file
 import Model_Settings.json_maker as json_maker
 json_maker.recompile_json_files()
-jsonToRead = '170131_TCOR_B.json'
+jsonToRead = '170208_ITR_B.json'
 print("Reading %s" % jsonToRead)
 with open('Model_Settings/'+jsonToRead) as data_file:
     modelParams = json.load(data_file)
@@ -105,7 +105,7 @@ def train():
                                      trainable=False)
 
         # Get images and transformation for model_cnn.
-        images, tHAB, tfrecFilenames = data_input.inputs(**modelParams)
+        imagesOrig, images, pOrig, tHAB, tfrecFileIDs = data_input.inputs(**modelParams)
 
         # Build a Graph that computes the HAB predictions from the
         # inference model.
@@ -178,13 +178,16 @@ def train():
 
 
         ######### USE LATEST STATE TO WARP IMAGES
+        lossValueSum = 0
+        duration = 0
         for step in xrange(int((modelParams['numTrainDatasetExamples']/modelParams['trainBatchSize']))+1):
             startTime = time.time()
-            predictedHAB, lossValue = sess.run([pHAB, loss])
-            duration = time.time() - startTime
-            #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFilenames
-            data_output.output(images, tHAB, pHAB, tfrecFilenames, **modelParams)
-            
+            evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, evlossValue = sess.run([imagesOrig, images, pOrig, tHAB, pHAB, tfrecFileIDs, loss])
+            lossValueSum = lossValueSum + evlossValue
+            duration = duration + (time.time() - startTime)
+            #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
+            data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
+        print('Average training loss = %.2f with average time = %.2f, steps = %d' % (lossValue/(step-1), duration/(step-1), step-1))
 
 
 def _setupLogging(logPath):

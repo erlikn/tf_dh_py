@@ -43,8 +43,12 @@ def _decode_byte_image(image, height, width, depth):
     """
     image = tf.decode_raw(image, tf.uint8)
     image = tf.cast(image, dtype=tf.float32)
-    image = tf.reshape(image, [height, width, depth])
-    image.set_shape([height, width, depth])
+    if depth > 1:
+        image = tf.reshape(image, [height, width, depth])
+        image.set_shape([height, width, depth])
+    else:
+        image = tf.reshape(image, [height, width])
+        image.set_shape([height, width])
     return image
 
 def parse_example_proto(exampleSerialized, **kwargs):
@@ -77,23 +81,24 @@ def parse_example_proto(exampleSerialized, **kwargs):
     
     featureMap ={
         'fileID': tf.FixedLenFeature([2], dtype=tf.int64),
-        'height': tf.FixedLenFeature([1], dtype=tf.int64),
-        'width': tf.FixedLenFeature([1], dtype=tf.int64),
-        'depth': tf.FixedLenFeature([1], dtype=tf.int64),
         'HAB': tf.FixedLenFeature([8], dtype=tf.float32),
-        'image': tf.FixedLenFeature([], dtype=tf.string, default_value='')}
-
+        'pOrig': tf.FixedLenFeature([8], dtype=tf.float32),
+        'image': tf.FixedLenFeature([], dtype=tf.string, default_value=''),
+        'imageOrig': tf.FixedLenFeature([], dtype=tf.string, default_value='')
+        }
     features = tf.parse_single_example(exampleSerialized, featureMap)
 
     fileID = features['fileID']
     image = _decode_byte_image(features['image'], kwargs.get('imageHeight'), kwargs.get('imageWidth'), kwargs.get('imageChannels'))
+    imageOrig = _decode_byte_image(features['imageOrig'], kwargs.get('imageOrigHeight'), kwargs.get('imageOrigWidth'), kwargs.get('imageOrigChannels'))
     HAB = features['HAB']
+    pOrig = features['pOrig']
 
     #validate_for_nan()
 
     return image, HAB, fileID
 
-def tfrecord_writer(imgPatchOrig, imgPatchPert, HAB, tfRecordFolder, tfFileName, fileID):
+def tfrecord_writer(imageOrig, imgPatchOrig, imgPatchPert, pOrig, HAB, tfRecordFolder, tfFileName, fileID):
     """Converts a dataset to tfrecords."""
     #images = data_set.images
     #labels = data_set.labels
@@ -103,29 +108,30 @@ def tfrecord_writer(imgPatchOrig, imgPatchPert, HAB, tfRecordFolder, tfFileName,
     rows = imgPatchOrig.shape[0]
     cols = imgPatchOrig.shape[1]
     depth = 2
-    #OLD
     stackedImage = np.stack((imgPatchOrig, imgPatchPert), axis=2) #3D array (hieght, width, channels)
     flatImage = stackedImage.reshape(rows*cols*depth)
-    #Stack Images
-    #stackedImage = np.array([imgPatchOrig.reshape(imgPatchOrig.shape[0]*imgPatchOrig.shape[1]),
-    #                imgPatchPert.reshape(imgPatchPert.shape[0]*imgPatchPert.shape[1])])
-    #flatImage = stackedImage.reshape(stackedImage.shape[0]*stackedImage.shape[1])
-    
     flatImageList = flatImage.tostring()
+
+    rows = imageOrig.shape[0]
+    cols = imageOrig.shape[1]
+    depth = 1
+    flatImage = imageOrig.reshape(rows*cols*depth)
+    flatImageOrigList = flatImage.tostring()
 
     HABRow = np.asarray([HAB[0][0], HAB[0][1], HAB[0][2], HAB[0][3],
                          HAB[1][0], HAB[1][1], HAB[1][2], HAB[1][3]], np.float32)
     HABList = HABRow.tolist()
-    
+    pOrigRow = np.asarray([pOrig[0][0], pOrig[0][1], pOrig[0][2], pOrig[0][3],
+                           pOrig[1][0], pOrig[1][1], pOrig[1][2], pOrig[1][3]], np.float32)
+    pOrigList = pOrigRow.tolist()
     #print('Writing', filename)
     writer = tf.python_io.TFRecordWriter(tfRecordPath)
     example = tf.train.Example(features=tf.train.Features(feature={
         'fileID': _int64_array(fileID),
-        'height': _int64_feature(rows),
-        'width': _int64_feature(cols),
-        'depth': _int64_feature(depth),
         'HAB': _float_nparray(HABList), # 2D np array
-        'image': _bytes_feature(flatImageList)
+        'pOrig': _float_nparray(pOrigList), # 2D np array
+        'image': _bytes_feature(flatImageList),
+        'imageOrig': _bytes_feature(flatImageOrigList)
         }))
     writer.write(example.SerializeToString())
     writer.close()
