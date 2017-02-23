@@ -49,6 +49,8 @@ tf.app.flags.DEFINE_integer('summaryWriteStep', 100,
                             """Number of batches to run.""")
 tf.app.flags.DEFINE_integer('modelCheckpointStep', 1000,
                             """Number of batches to run.""")
+tf.app.flags.DEFINE_integer('imageWarpingProgressStep', 500,
+                            """Number of batches to run.""")
 ####################################################
 def _get_control_params():
     modelParams['phase'] = 'test'
@@ -157,6 +159,10 @@ def test():
             #if step % FLAGS.modelCheckpointStep == 0 or (step + 1) == FLAGS.maxSteps:
             #    checkpoint_path = os.path.join(FLAGS.testLogDir, 'model.ckpt')
             #    saver.save(sess, checkpoint_path, global_step=step)
+            # Print Progress Info
+            if ((step % FLAGS.imageWarpingProgressStep) == 0) or (step+1 == modelParams['maxSteps']):
+                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % (step/modelParams['maxSteps'], lossValueSum/(step+1), duration/60, ((duration*modelParams['maxSteps'])/step+1)/60))
+
 
 def _setupLogging(logPath):
     # cleanup

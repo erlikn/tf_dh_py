@@ -58,7 +58,7 @@ def perturb_writer( ID, idx,
     #    else:
     #        writer.writerow(pOrig)
     # Tensorflow record
-    filename = str(ID) + "_" + str(idx) +".tfrecords"
+    filename = str(ID) + "_" + str(idx)
     fileID = [ID, idx]
     tfrecord_io.tfrecord_writer(imgOrig, imgPatchOrig, imgPatchPert, pOrig, HAB, tfRecFolder, filename, fileID)
 
@@ -66,7 +66,7 @@ def perturb_writer( ID, idx,
     #imgPp = image_process_subMean_divStd(imgPatchPert)
     #tfrecord_writer(imgOp, imgPp, HAB, pOrig, tfRecFolder+filename)
     # Tensorflow record in range -1 and 1
-    #filename = filenameWrite.replace(".jpg", "_"+ str(idx) +".tfrecords")
+    #filename = filenameWrite.replace(".jpg", "_"+ str(idx))
     #imgOp = image_process_subMean_divStd_n1p1(imgPatchOrig)
     #imgPp = image_process_subMean_divStd_n1p1(imgPatchPert)
     #tfrecord_writer(imgOp, imgPp, HAB, pOrig, tfRecFolderN1P1+filename)

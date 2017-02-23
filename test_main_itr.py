@@ -27,7 +27,7 @@ from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 #import tensorflow.python.debug as tf_debug
 
-PHASE = 'train'
+PHASE = 'test'
 # import json_maker, update json files and read requested json file
 import Model_Settings.json_maker as json_maker
 json_maker.recompile_json_files()
@@ -96,7 +96,7 @@ def train():
     #    # also load the target output sizes
     #    params['targSz'] = meanInfo["targSz"]
 
-    _setupLogging(os.path.join(modelParams['trainLogDir'], "genlog"))
+    _setupLogging(os.path.join(modelParams['testLogDir'], "genlog"))
 
     with tf.Graph().as_default():
         # BGR to RGB
@@ -120,7 +120,7 @@ def train():
 
         # Build a Graph that trains the model with one batch of examples and
         # updates the model parameters.
-        opTrain = model_cnn.train(loss, globalStep, **modelParams)
+        opTrain = model_cnn.test(loss, globalStep, **modelParams)
         ##############################
 
         # Create a saver.
@@ -135,55 +135,21 @@ def train():
 
         opCheck = tf.add_check_numerics_ops()
         # Start running operations on the Graph.
-        sess = tf.Session(config=tf.ConfigProto(log_device_placement=modelParams['logDevicePlacement']))
+        config = tf.ConfigProto(log_device_placement=modelParams['logDevicePlacement'])
+        config.graph_options.optimizer_options.global_jit_level = tf.OptimizerOptions.ON_1
+        sess = tf.Session(config = config)
         #sess = tf_debug.LocalCLIDebugWrapperSession(sess)
         #sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
         sess.run(init)
 
+         # restore a saver.
+        saver = tf.train.Saver(tf.global_variables())
+        saver.restore(sess, modelParams['trainLogDir']+'/model.ckpt-'+str(modelParams['trainMaxSteps']-1))
+
         # Start the queue runners.
         tf.train.start_queue_runners(sess=sess)
 
-        summaryWriter = tf.summary.FileWriter(modelParams['trainLogDir'], sess.graph)
-
-        for step in xrange(modelParams['maxSteps']):
-            startTime = time.time()
-            _, lossValue = sess.run([opTrain, loss])
-            duration = time.time() - startTime
-
-            assert not np.isnan(lossValue), 'Model diverged with loss = NaN'
-
-            # Calculate pixel error for current batch
-            lossValueSumPixel = np.sqrt(lossValue*(2/(modelParams['activeBatchSize']*8)))
-
-            if step % FLAGS.printOutStep == 0:
-                numExamplesPerStep = modelParams['activeBatchSize']
-                examplesPerSec = numExamplesPerStep / duration
-                secPerBatch = float(duration)
-
-                format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
-                              'sec/batch)')
-                logging.info(format_str % (datetime.now(), step, lossValue,
-                                           examplesPerSec, secPerBatch))
-
-            if step % FLAGS.summaryWriteStep == 0:
-                summaryStr = sess.run(summaryOp)
-                summaryWriter.add_summary(summaryStr, step)
-
-            # Save the model checkpoint periodically.
-            if step % FLAGS.modelCheckpointStep == 0 or (step + 1) == modelParams['maxSteps']:
-                checkpointPath = os.path.join(modelParams['trainLogDir'], 'model.ckpt')
-                saver.save(sess, checkpointPath, global_step=step)
-
-            if step > 10000 and lossValueSumPixel < minPixelLoss:
-                print('saving min loss state')
-                minPixelLoss = lossValueSumPixel
-                checkpointPath = os.path.join(modelParams['trainLogDir'], 'model_minLoss.ckpt')
-                saver.save(sess, checkpointPath)
-            
-            # Print Progress Info
-            if ((step % FLAGS.imageWarpingProgressStep) == 0) or (step+1 == modelParams['maxSteps']):
-                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % (step/modelParams['maxSteps'], lossValueSum/(step+1), duration/60, ((duration*modelParams['maxSteps'])/step+1)/60))
-
+        summaryWriter = tf.summary.FileWriter(modelParams['testLogDir'], sess.graph)
 
         ######### USE LATEST STATE TO WARP IMAGES
         lossValueSum = 0
@@ -192,14 +158,34 @@ def train():
         print('Warping images with batch size %d in %d steps' % (modelParams['activeBatchSize'], stepsForOneDataRound))
         for step in xrange(stepsForOneDataRound):
             startTime = time.time()
-            evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, evlossValue = sess.run([imagesOrig, images, pOrig, tHAB, pHAB, tfrecFileIDs, loss])
-            lossValueSum += np.sqrt(lossValue*(2/(modelParams['activeBatchSize']*8)))
+            evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, lossValue = sess.run([imagesOrig, images, pOrig, tHAB, pHAB, tfrecFileIDs, loss])
             duration = duration + (time.time() - startTime)
+
+            assert not np.isnan(lossValue), 'Model diverged with loss = NaN'
+
+            lossValueSum += np.sqrt(lossValue*(2/(modelParams['activeBatchSize']*8)))
+            lossValueAvgPixel = lossValueSum/(step+1)
             #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
             data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
+            
+            if step % FLAGS.printOutStep == 0:
+                numExamplesPerStep = modelParams['activeBatchSize']
+                examplesPerSec = numExamplesPerStep / duration
+                secPerBatch = float(duration)
+
+                format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
+                              'sec/batch), pixelErr = %.3f')
+                logging.info(format_str % (datetime.now(), step, lossValue,
+                                     examplesPerSec, secPerBatch, lossValueAvgPixel))
+            
+            if step % FLAGS.summaryWriteStep == 0:
+                summaryStr = sess.run(summaryOp)
+                summaryWriter.add_summary(summaryStr, step)
+
             # Print Progress Info
             if ((step % FLAGS.imageWarpingProgressStep) == 0) or (step+1 == stepsForOneDataRound):
-                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % (step/stepsForOneDataRound, lossValueSum/(step+1), duration/60, ((duration*stepsForOneDataRound)/step+1)/60))
+                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Estimated Completion: %.2f mins' % (step/stepsForOneDataRound, lossValueSum/(step+1), duration/60, ((duration*stepsForOneDataRound)/step+1)/60))
+        
         print('Average training loss = %.2f - Average time = %.2f, Steps = %d' % (lossValue/step, duration/step, step))
 
 
@@ -225,19 +211,19 @@ def _setupLogging(logPath):
     logging.info("Logging setup complete to %s" % logPath)
 
 def main(argv=None):  # pylint: disable=unused-argumDt
-    print('Rounds on datase = %.1f' % float((modelParams['trainBatchSize']*modelParams['trainMaxSteps'])/modelParams['numTrainDatasetExamples']))
+    print('Rounds on datase = %.1f' % float((modelParams['testBatchSize']*modelParams['testMaxSteps'])/modelParams['numTestDatasetExamples']))
     print('Train Input: %s' % modelParams['trainDataDir'])
     #print('Test  Input: %s' % modelParams['testDataDir'])
-    print('Train Logs Output: %s' % modelParams['trainLogDir'])
+    print('Train Logs Input: %s' % modelParams['trainLogDir'])
     #print('Test  Logs Output: %s' % modelParams['testLogDir'])
     print('Train Warp Output: %s' % modelParams['warpedTrainDataDir'])
     #print('Test  Warp Output: %s' % modelParams['warpedTestDataDir'])
     if input("(Overwrite WARNING) Did you change logs directory? ") != "yes":
         print("Please consider changing logs directory in order to avoid overwrite!")
         return
-    if tf.gfile.Exists(modelParams['trainLogDir']):
-        tf.gfile.DeleteRecursively(modelParams['trainLogDir'])
-    tf.gfile.MakeDirs(modelParams['trainLogDir'])
+    if tf.gfile.Exists(modelParams['testLogDir']):
+        tf.gfile.DeleteRecursively(modelParams['testLogDir'])
+    tf.gfile.MakeDirs(modelParams['testLogDir'])
     train()
 
 

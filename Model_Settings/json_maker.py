@@ -1,12 +1,22 @@
+# TODO
+# REPLACE dataDir WITH data['dataDir']
+
+
+
 import json
 import collections
 import numpy as np
+import os
 
 def write_json_file(filename, datafile):
     filename = 'Model_Settings/'+filename
     datafile = collections.OrderedDict(sorted(datafile.items()))
     with open(filename, 'w') as outFile:
         json.dump(datafile, outFile, indent = 0)
+
+def _set_folders(folderPath):
+    if not os.path.exists(folderPath):
+        os.makedirs(folderPath)
 ####################################################################################
 ####################################################################################
 ####################################################################################
@@ -18,7 +28,8 @@ def write_json_file(filename, datafile):
 # Twin Common Parameters
 trainLogDirBase = '../Data/128_logs/tfdh_twin_py_logs/train_logs/'
 testLogDirBase = '../Data/128_logs/tfdh_twin_py_logs/test_logs/'
-wrapedImageFolderNameBase = '../Data/128_train_tfrecords_iterative/'
+warpedImageTrainBase = '../Data/128_train_tfrecords_iterative/'
+warpedImageTestBase = '../Data/128_test_tfrecords_iterative/'
 
 # Shared Descriptions
 modelName_desc = "Name of the model file to be loaded from Model_Factory"
@@ -31,8 +42,8 @@ numTrainDatasetExamples_desc = "Number of images to process in train dataset"
 numTestDatasetExamples_desc = "Number of images to process in test dataset"
 trainLogDir_desc = "Directory where to write train event logs and checkpoints"
 testLogDir_desc = "Directory where to write test event logs and checkpoints"
-wrapedImageFolderName_desc = "Directory where to write wrapped images"
-warpOriginalImage_desc = "Flag to warp whole original image to produce pert or just the patch"
+warpedTrainDataDir_desc = "Directory where to write wrapped train images"
+warpedTestDataDir_desc = "Directory where to write wrapped test images"
 
 imageHeight_desc = "Image Height"
 imageWidth_desc = "Image Width"
@@ -50,6 +61,7 @@ trainBatchSize_desc = "Batch size of input data for train"
 testBatchSize_desc = "Batch size of input data for test"
 batchNorm_desc = "Should we use batch normalization"
 weightNorm_desc = "Should we use weight normalization"
+warpOriginalImage_desc = "Flag to warp whole original image to produce pert or just the patch"
 optimizer_desc = "Type of optimizer to be used [AdamOptimizer, MomentumOptimizer, GradientDescentOptimizer]"
 initialLearningRate_desc = "Initial learning rate."
 learningRateDecayFactor_desc = "Learning rate decay factor"
@@ -78,8 +90,8 @@ numTrainDatasetExamples = 500000
 numTestDatasetExamples = 25000
 trainLogDir = trainLogDirBase+'170127_TWN_MOM_W'
 testLogDir = testLogDirBase+'170127_TWN_MOM_W'
-wrapedImageFolderName = wrapedImageFolderNameBase+' '
-warpOriginalImage = True 
+warpedTrainDataDir = warpedImageTrainBase+' '
+warpedTestDataDir = warpedImageTestBase+' '
 
 imageHeight = 128
 imageWidth = 128
@@ -97,6 +109,7 @@ trainBatchSize = 20
 testBatchSize = 20
 batchNorm = False
 weightNorm = True
+warpOriginalImage = True
 optimizer = 'MomentumOptimizer' # AdamOptimizer MomentumOptimizer GradientDescentOptimizer
 initialLearningRate = 0.005
 learningRateDecayFactor = 0.1
@@ -124,8 +137,8 @@ data = {'modelName' : modelName,
         'numTestDatasetExamples' : numTestDatasetExamples,
         'trainLogDir' : trainLogDir,
         'testLogDir' : testLogDir,
-        'wrapedImageFolderName' : wrapedImageFolderName,
-        'warpOriginalImage' : warpOriginalImage,
+        'warpedTrainDataDir' : warpedTrainDataDir,
+        'warpedTestDataDir' : warpedTestDataDir,
 
         'imageHeight' : imageHeight,
         'imageWidth' : imageWidth,
@@ -143,6 +156,7 @@ data = {'modelName' : modelName,
         'testBatchSize' : testBatchSize,
         'batchNorm' : batchNorm,
         'weightNorm' : weightNorm,
+        'warpOriginalImage' : warpOriginalImage,
         'optimizer' : optimizer,
         'initialLearningRate' : initialLearningRate,
         'learningRateDecayFactor' : learningRateDecayFactor,
@@ -171,8 +185,8 @@ data = {'modelName' : modelName,
         'numTestDatasetExamples_desc' : numTestDatasetExamples_desc,
         'trainLogDir_desc' : trainLogDir_desc,
         'testLogDir_desc' : testLogDir_desc,
-        'wrapedImageFolderName' : wrapedImageFolderName_desc,
-        'warpOriginalImage_desc' : warpOriginalImage_desc,
+        'warpedTrainDataDir_desc' : warpedTrainDataDir_desc,
+        'warpedTestDataDir_desc' : warpedTestDataDir_desc,
 
         'imageHeight_desc' : imageHeight_desc,
         'imageWidth_desc' : imageWidth_desc,
@@ -190,6 +204,7 @@ data = {'modelName' : modelName,
         'testBatchSize_desc' : testBatchSize_desc,
         'batchNorm_desc' : batchNorm_desc,
         'weightNorm_desc' : weightNorm_desc,
+        'warpOriginalImage_desc' : warpOriginalImage_desc,
         'optimizer_desc' : optimizer_desc,
         'initialLearningRate_desc' : initialLearningRate_desc,
         'learningRateDecayFactor_desc' : learningRateDecayFactor_desc,
@@ -216,6 +231,8 @@ def write_twin():
     # Twin Common Parameters
     trainLogDirBase = '../Data/128_logs/tfdh_twin_py_logs/train_logs/'
     testLogDirBase = '../Data/128_logs/tfdh_twin_py_logs/test_logs/'
+    trainDataDir = '../Data/128_train_tfrecords'
+    testDataDir = '../Data/128_test_tfrecords'
 
     if reCompileJSON:
         data['trainLogDir'] = trainLogDirBase+'170127_TWN_MOM_W'
@@ -404,6 +421,8 @@ def write_single():
     # Single Common Parameters
     trainLogDirBase = '../Data/128_logs/tfdh_py_logs/train_logs/'
     testLogDirBase = '../Data/128_logs/tfdh_py_logs/test_logs/'
+    trainDataDir = '../Data/128_train_tfrecords'
+    testDataDir = '../Data/128_test_tfrecords'
 
     data['modelName'] = 'cnn_8l2f'
 
@@ -463,6 +482,9 @@ def write_twin_correlation():
     # Twin Correlation Matching Common Parameters
     trainLogDirBase = '../Data/128_logs/tfdh_twincorr_logs/train_logs/'
     testLogDirBase = '../Data/128_logs/tfdh_twincorr_logs/test_logs/'
+    trainDataDir = '../Data/128_train_tfrecords'
+    testDataDir = '../Data/128_test_tfrecords'
+
 
     data['modelName'] = 'twin_cnn_4pCorr4l2f'
 
@@ -493,16 +515,23 @@ def write_iterative():
     # Twin Correlation Matching Common Parameters
     trainLogDirBase = '../Data/128_logs/tfdh_iterative_logs/train_logs/'
     testLogDirBase = '../Data/128_logs/tfdh_iterative_logs/test_logs/'
-
+    
     # Iterative model only changes the wayoutput is written, 
     # so any model can be used by ease
     data['modelName'] = 'twin_cnn_4p4l2f'
 
     ##############
     if reCompileJSON:
-        data['trainLogDir'] = trainLogDirBase+'170208_ITR_B'
-        data['testLogDir'] = testLogDirBase+'170208_ITR_B'
-        data['wrapedImageFolderName'] = wrapedImageFolderNameBase + '170208_ITR_B'
+        ### ITERATION 1
+        runName = '170208_ITR_W_1'
+        data['trainDataDir'] = '../Data/128_train_tfrecords'
+        data['testDataDir'] = '../Data/128_test_tfrecords'
+        data['trainLogDir'] = trainLogDirBase + runName
+        data['testLogDir'] = testLogDirBase + runName
+        data['warpedTrainDataDir'] = warpedImageTrainBase + runName
+        data['warpedTestDataDir'] = warpedImageTestBase+ runName
+        _set_folders(data['warpedTrainDataDir'])
+        _set_folders(data['warpedTestDataDir'])
         data['warpOriginalImage'] = True
         data['trainMaxSteps'] = 90000
         data['numEpochsPerDecay'] = 30000.0
@@ -510,9 +539,29 @@ def write_iterative():
         data['testBatchSize'] = 20
         data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
         data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
-        data['batchNorm'] = True
-        data['weightNorm'] = False
-        write_json_file('170208_ITR_B.json', data)
+        data['batchNorm'] = False
+        data['weightNorm'] = True
+        write_json_file(runName+'.json', data)
+        ### ITERATION 2
+        runName = '170208_ITR_W_2'
+        data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
+        data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
+        data['trainLogDir'] = trainLogDirBase + runName
+        data['testLogDir'] = testLogDirBase + runName
+        data['warpedTrainDataDir'] = warpedImageTrainBase + runName
+        data['warpedTestDataDir'] = warpedImageTestBase+ runName
+        _set_folders(data['warpedTrainDataDir'])
+        _set_folders(data['warpedTestDataDir'])
+        data['warpOriginalImage'] = True
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 20
+        data['testBatchSize'] = 20
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['batchNorm'] = False
+        data['weightNorm'] = True
+        write_json_file(runName+'.json', data)
 
 ####################################################################################
 ####################################################################################
@@ -543,6 +592,7 @@ def write_residual():
         data['batchNorm'] = True
         data['weightNorm'] = False
         write_json_file('170213_TRES_B.json', data)
+        
 ####################################################################################
 ####################################################################################
 ####################################################################################

@@ -115,7 +115,7 @@ def tfrecord_writer(imageOrig, imgPatchOrig, imgPatchPert, pOrig, HAB, tfRecordF
     #images = data_set.images
     #labels = data_set.labels
     #num_examples = data_set.num_examples
-    tfRecordPath = tfRecordFolder + tfFileName
+    tfRecordPath = tfRecordFolder + tfFileName + ".tfrecords"
 
     rows = imgPatchOrig.shape[0]
     cols = imgPatchOrig.shape[1]
@@ -126,7 +126,6 @@ def tfrecord_writer(imageOrig, imgPatchOrig, imgPatchPert, pOrig, HAB, tfRecordF
 
     rows = imageOrig.shape[0]
     cols = imageOrig.shape[1]
-    print(imageOrig.shape)
     depth = 1
     flatImage = imageOrig.reshape(rows*cols*depth)
     flatImageOrigList = flatImage.tostring()
