@@ -149,14 +149,15 @@ def train():
         # Start the queue runners.
         tf.train.start_queue_runners(sess=sess)
 
-        summaryWriter = tf.summary.FileWriter(modelParams['testLogDir'], sess.graph)
+        #summaryWriter = tf.summary.FileWriter(modelParams['testLogDir'], sess.graph)
 
         ######### USE LATEST STATE TO WARP IMAGES
         lossValueSum = 0
         duration = 0
         stepsForOneDataRound = int((modelParams['numTrainDatasetExamples']/modelParams['trainBatchSize']))+1
         print('Warping images with batch size %d in %d steps' % (modelParams['activeBatchSize'], stepsForOneDataRound))
-        for step in xrange(stepsForOneDataRound):
+        #for step in xrange(stepsForOneDataRound):
+        for step in xrange(99):
             startTime = time.time()
             evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, lossValue = sess.run([imagesOrig, images, pOrig, tHAB, pHAB, tfrecFileIDs, loss])
             duration = duration + (time.time() - startTime)
@@ -167,7 +168,7 @@ def train():
             lossValueAvgPixel = lossValueSum/(step+1)
             #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
             data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
-            
+
             if step % FLAGS.printOutStep == 0:
                 numExamplesPerStep = modelParams['activeBatchSize']
                 examplesPerSec = numExamplesPerStep / duration
@@ -175,17 +176,16 @@ def train():
 
                 format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
                               'sec/batch), pixelErr = %.3f')
-                logging.info(format_str % (datetime.now(), step, lossValue,
-                                     examplesPerSec, secPerBatch, lossValueAvgPixel))
-            
-            if step % FLAGS.summaryWriteStep == 0:
-                summaryStr = sess.run(summaryOp)
-                summaryWriter.add_summary(summaryStr, step)
+                logging.info(format_str % (datetime.now(), step, lossValue, examplesPerSec, secPerBatch, lossValueAvgPixel))
+
+            #if step % FLAGS.summaryWriteStep == 0:
+            #    summaryStr = sess.run(summaryOp)
+            #    summaryWriter.add_summary(summaryStr, step)
 
             # Print Progress Info
             if ((step % FLAGS.imageWarpingProgressStep) == 0) or (step+1 == stepsForOneDataRound):
-                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Estimated Completion: %.2f mins' % (step/stepsForOneDataRound, lossValueSum/(step+1), duration/60, ((duration*stepsForOneDataRound)/step+1)/60))
-        
+                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Estimated Completion: %.2f mins' % (step/stepsForOneDataRound, lossValueSum/(step+1), duration/60, ((duration*stepsForOneDataRound)/(step+1))/60))
+
         print('Average training loss = %.2f - Average time = %.2f, Steps = %d' % (lossValue/step, duration/step, step))
 
 
@@ -221,9 +221,9 @@ def main(argv=None):  # pylint: disable=unused-argumDt
     if input("(Overwrite WARNING) Did you change logs directory? ") != "yes":
         print("Please consider changing logs directory in order to avoid overwrite!")
         return
-    if tf.gfile.Exists(modelParams['testLogDir']):
-        tf.gfile.DeleteRecursively(modelParams['testLogDir'])
-    tf.gfile.MakeDirs(modelParams['testLogDir'])
+    #if tf.gfile.Exists(modelParams['testLogDir']):
+    #    tf.gfile.DeleteRecursively(modelParams['testLogDir'])
+    #tf.gfile.MakeDirs(modelParams['testLogDir'])
     train()
 
 

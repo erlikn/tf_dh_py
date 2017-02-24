@@ -104,6 +104,7 @@ def output(batchImageOrig, batchImage, batchPOrig, batchTHAB, batchPHAB, batchTF
             patchOrig, patchPert = _warp_wOut_orig_newTarget(batchImage[i], batchPHAB[i])
 
         # Write each Tensorflow record
+        print(batchImageOrig[i].shape)
         fileIDs = str(batchTFrecFileIDs[i][0]) + '_' + str(batchTFrecFileIDs[i][1])
         tfrecord_io.tfrecord_writer(batchImageOrig[i], patchOrig, patchPert, pOrig, HAB,
                                     warpedImageFolder,

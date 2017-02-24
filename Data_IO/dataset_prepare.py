@@ -78,12 +78,10 @@ def generate_random_perturbations(datasetType, img, ID, num, tfRecFolder):
         # if 320x240 => 128x128 w thrPerturbation=32
         squareSize=128
         thrPerturbation=32
-        imageSize = (320,240)
     if "test" in datasetType:
         # if 640x480 => 256x256 w thrPerturbation=64
         squareSize=256
         thrPerturbation=64
-        imageSize = (640,480)
     rndListRowOrig = random.sample(range(thrPerturbation,img.shape[0]-thrPerturbation-squareSize), num)
     rndListColOrig = random.sample(range(thrPerturbation,img.shape[0]-thrPerturbation-squareSize), num)
     for i in range(0, len(rndListRowOrig)):
@@ -102,7 +100,8 @@ def generate_random_perturbations(datasetType, img, ID, num, tfRecFolder):
         pPert = np.asarray(pOrig+H_AB)
         # get transformation matrix and transform the image to new space
         Hmatrix = cv2.getPerspectiveTransform(np.transpose(pOrig), np.transpose(pPert))
-        dst = cv2.warpPerspective(img, Hmatrix, imageSize)
+        dst = cv2.warpPerspective(img, Hmatrix, (img.shape[0], img.shape[1]))
+        print(img.shape)
         # crop the image at original location
         imgTempPert = dst[pRow:pRow+squareSize, pCol:pCol+squareSize]
         if dst.max() > 256:
@@ -113,11 +112,11 @@ def generate_random_perturbations(datasetType, img, ID, num, tfRecFolder):
             imgTempOrig = cv2.resize(imgTempOrig, (128,128))
             imgTempPert = cv2.resize(imgTempPert, (128,128))
             H_AB = H_AB/2
-        perturb_writer(ID, i,
-                       np.asarray(img), imgTempOrig, imgTempPert, H_AB, pOrig,
-                       tfRecFolder)
-        #mu = np.average(np.linalg.norm(H_AB, axis=0))
-        #var = np.var(np.linalg.norm(H_AB, axis=0))
+        ######
+        cv2.imshow('Orig', img)
+        cv2.imshow('Pert', dst)
+        cv2.waitKey(1)
+        ######
         mu = np.average(H_AB, axis=1)
         var = np.sqrt(np.var(H_AB, axis=1))
     return mu, var
