@@ -66,14 +66,13 @@ def _warp_w_orig_newTarget(imageOrig, imageDuo, pOrig, cHAB, **kwargs):
     # get transformation matrix and transform the image to new space
     Hmatrix = cv2.getPerspectiveTransform(np.transpose(pOrig), np.transpose(pPert))
     pert = cv2.warpPerspective(imageOrig, Hmatrix, (imageOrig.shape[1], imageOrig.shape[0]))
-    pert = cv2.warpPerspective(imageOrig, Hmatrix, (imageOrig.shape[1], imageOrig.shape[0]))
     print(imageOrig.shape)
     # crop the image at original location
     pert = pert[pRow:pRow+squareSize, pCol:pCol+squareSize]
 
     # for TEST samples divide H_AB by 2 (64->32) and reduce divide image size by 4 (256x256->128x128)
     if kwargs.get('phase') == 'test':
-        pert = cv2.resize(pert, (orig.shape[0], orig.shape[1]))
+        pert = cv2.resize(pert, (orig.shape[1], orig.shape[0]))
 
     return orig, pert
 
