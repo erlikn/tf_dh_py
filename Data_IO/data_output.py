@@ -65,7 +65,9 @@ def _warp_w_orig_newTarget(imageOrig, imageDuo, pOrig, cHAB, **kwargs):
     pPert = np.asarray(pOrig+cHAB)
     # get transformation matrix and transform the image to new space
     Hmatrix = cv2.getPerspectiveTransform(np.transpose(pOrig), np.transpose(pPert))
-    pert = cv2.warpPerspective(imageOrig, Hmatrix, (imageOrig.shape[0], imageOrig.shape[1]))
+    pert = cv2.warpPerspective(imageOrig, Hmatrix, (imageOrig.shape[1], imageOrig.shape[0]))
+    pert = cv2.warpPerspective(imageOrig, Hmatrix, (imageOrig.shape[1], imageOrig.shape[0]))
+    print(imageOrig.shape)
     # crop the image at original location
     pert = pert[pRow:pRow+squareSize, pCol:pCol+squareSize]
 

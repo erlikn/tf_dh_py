@@ -100,7 +100,7 @@ def generate_random_perturbations(datasetType, img, ID, num, tfRecFolder):
         pPert = np.asarray(pOrig+H_AB)
         # get transformation matrix and transform the image to new space
         Hmatrix = cv2.getPerspectiveTransform(np.transpose(pOrig), np.transpose(pPert))
-        dst = cv2.warpPerspective(img, Hmatrix, (img.shape[0], img.shape[1]))
+        dst = cv2.warpPerspective(img, Hmatrix, (img.shape[1], img.shape[0]))
         print(img.shape)
         # crop the image at original location
         imgTempPert = dst[pRow:pRow+squareSize, pCol:pCol+squareSize]
