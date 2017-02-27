@@ -112,11 +112,9 @@ def generate_random_perturbations(datasetType, img, ID, num, tfRecFolder):
             imgTempOrig = cv2.resize(imgTempOrig, (128,128))
             imgTempPert = cv2.resize(imgTempPert, (128,128))
             H_AB = H_AB/2
-        ######
-        cv2.imshow('Orig', img)
-        cv2.imshow('Pert', dst)
-        cv2.waitKey(1)
-        ######
+        perturb_writer(ID, i,
+                       imgTempOrig, imgTempPert, H_AB, pOrig,
+                       tfRecFolder)
         mu = np.average(H_AB, axis=1)
         var = np.sqrt(np.var(H_AB, axis=1))
     return mu, var
@@ -138,6 +136,9 @@ def prepare_dataset(datasetType, readFolder, tfRecFolder):
         else: # test
             num = NUM_OF_TEST_PERTURBED_IMAGES
         img = cv2.imread(readFolder+filename, 0)
+        if img.max-img.min > 0:
+            img = (img-img.min())/(img.max-img.min)
+        img = np.asarray(img, np.float32)
         if img.ndim == 2:
             mu, var = generate_random_perturbations(datasetType, img, id, num, tfRecFolder)
             tMu = tMu + mu

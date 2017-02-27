@@ -144,7 +144,8 @@ def train():
         tf.train.start_queue_runners(sess=sess)
 
         summaryWriter = tf.summary.FileWriter(modelParams['trainLogDir'], sess.graph)
-
+        
+        lossValueSum = 0
         for step in xrange(modelParams['maxSteps']):
             startTime = time.time()
             _, lossValue = sess.run([opTrain, loss])
@@ -154,6 +155,7 @@ def train():
 
             # Calculate pixel error for current batch
             lossValueSumPixel = np.sqrt(lossValue*(2/(modelParams['activeBatchSize']*8)))
+            lossValueSum += lossValueSumPixel
 
             if step % FLAGS.printOutStep == 0:
                 numExamplesPerStep = modelParams['activeBatchSize']
@@ -170,7 +172,7 @@ def train():
                 summaryWriter.add_summary(summaryStr, step)
 
             # Save the model checkpoint periodically.
-            if step % FLAGS.modelCheckpointStep == 0 or (step + 1) == modelParams['maxSteps']:
+            if step % FLAGS.modelCheckpointStep == 0 or (step + 1) == modelParams['trainMaxSteps']:
                 checkpointPath = os.path.join(modelParams['trainLogDir'], 'model.ckpt')
                 saver.save(sess, checkpointPath, global_step=step)
 
@@ -181,12 +183,12 @@ def train():
                 saver.save(sess, checkpointPath)
             
             # Print Progress Info
-            if ((step % FLAGS.imageWarpingProgressStep) == 0) or (step+1 == modelParams['maxSteps']):
-                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % (step/modelParams['maxSteps'], lossValueSum/(step+1), duration/60, ((duration*modelParams['maxSteps'])/step+1)/60))
+            if ((step % FLAGS.imageWarpingProgressStep) == 0) or (step+1 == modelParams['trainMaxSteps']):
+                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' %
+                        (step/modelParams['trainMaxSteps'], lossValueSum/(step+1), duration/60, ((duration*modelParams['trainMaxSteps'])/(step+1))/60))
 
 
         ######### USE LATEST STATE TO WARP IMAGES
-        lossValueSum = 0
         duration = 0
         stepsForOneDataRound = int((modelParams['numTrainDatasetExamples']/modelParams['trainBatchSize']))+1
         print('Warping images with batch size %d in %d steps' % (modelParams['activeBatchSize'], stepsForOneDataRound))
@@ -199,7 +201,8 @@ def train():
             data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
             # Print Progress Info
             if ((step % FLAGS.imageWarpingProgressStep) == 0) or (step+1 == stepsForOneDataRound):
-                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % (step/stepsForOneDataRound, lossValueSum/(step+1), duration/60, ((duration*stepsForOneDataRound)/step+1)/60))
+                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % 
+                        (step/stepsForOneDataRound, lossValueSum/(step+1), duration/60, ((duration*stepsForOneDataRound)/(step+1))/60))
         print('Average training loss = %.2f - Average time = %.2f, Steps = %d' % (lossValue/step, duration/step, step))
 
 

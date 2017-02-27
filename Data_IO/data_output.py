@@ -66,7 +66,7 @@ def _warp_w_orig_newTarget(imageOrig, imageDuo, pOrig, cHAB, **kwargs):
     # get transformation matrix and transform the image to new space
     Hmatrix = cv2.getPerspectiveTransform(np.transpose(pOrig), np.transpose(pPert))
     pert = cv2.warpPerspective(imageOrig, Hmatrix, (imageOrig.shape[1], imageOrig.shape[0]))
-    print(imageOrig.shape)
+
     # crop the image at original location
     pert = pert[pRow:pRow+squareSize, pCol:pCol+squareSize]
 
@@ -89,6 +89,9 @@ def output(batchImageOrig, batchImage, batchPOrig, batchTHAB, batchPHAB, batchTF
     """
     warpedImageFolder = kwargs.get('warpedOutputFolder')+'/'
     ## for each value call the record writer function
+    corrupt_patchOrig=0
+    corrupt_patchPert=0
+    corrupt_imageOrig=0
     for i in range(kwargs.get('activeBatchSize')):
         # Get the difference of tHAB and pHAB, and make new perturbed image based on that
         cHAB = batchTHAB[i]-batchPHAB[i]
@@ -105,10 +108,15 @@ def output(batchImageOrig, batchImage, batchPOrig, batchTHAB, batchPHAB, batchTF
             patchOrig, patchPert = _warp_wOut_orig_newTarget(batchImage[i], batchPHAB[i])
 
         # Write each Tensorflow record
-        print(batchImageOrig[i].shape)
         fileIDs = str(batchTFrecFileIDs[i][0]) + '_' + str(batchTFrecFileIDs[i][1])
         tfrecord_io.tfrecord_writer(batchImageOrig[i], patchOrig, patchPert, pOrig, HAB,
                                     warpedImageFolder,
                                     fileIDs, batchTFrecFileIDs[i])
+        if batchImageOrig[i].shape[0] != 240:
+            corrupt_imageOrig+=1
+        if patchOrig.shape[0]!=128:
+            corrupt_patchOrig+=1
+        if patchPert.shape[0]!=128:
+            corrupt_patchPert+=1
 
-    return
+    return corrupt_imageOrig, corrupt_patchOrig, corrupt_patchPert

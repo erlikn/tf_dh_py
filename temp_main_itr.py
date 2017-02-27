@@ -63,6 +63,7 @@ def _get_control_params():
         modelParams['existingParams'] = np.load(modelParams['initExistingWeights']).item()
 
     if modelParams['phase'] == 'train':
+        print('TRAIN FUCK')
         modelParams['activeBatchSize'] = modelParams['trainBatchSize']
         modelParams['maxSteps'] = modelParams['trainMaxSteps']
         modelParams['numExamplesPerEpoch'] = modelParams['numTrainDatasetExamples']
@@ -70,6 +71,7 @@ def _get_control_params():
         modelParams['warpedOutputFolder'] = modelParams['warpedTrainDataDir']
 
     if modelParams['phase'] == 'test':
+        print('FUCKING TEST')
         modelParams['activeBatchSize'] = modelParams['testBatchSize']
         modelParams['maxSteps'] = modelParams['testMaxSteps']
         modelParams['numExamplesPerEpoch'] = modelParams['numTestDatasetExamples']
@@ -149,15 +151,17 @@ def train():
         # Start the queue runners.
         tf.train.start_queue_runners(sess=sess)
 
-        #summaryWriter = tf.summary.FileWriter(modelParams['testLogDir'], sess.graph)
+        summaryWriter = tf.summary.FileWriter(modelParams['testLogDir'], sess.graph)
 
         ######### USE LATEST STATE TO WARP IMAGES
         lossValueSum = 0
         duration = 0
         stepsForOneDataRound = int((modelParams['numTrainDatasetExamples']/modelParams['trainBatchSize']))+1
         print('Warping images with batch size %d in %d steps' % (modelParams['activeBatchSize'], stepsForOneDataRound))
-        #for step in xrange(stepsForOneDataRound):
-        for step in xrange(99):
+        imo=0
+        pto=0
+        ptp=0
+        for step in xrange(stepsForOneDataRound):
             startTime = time.time()
             evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, lossValue = sess.run([imagesOrig, images, pOrig, tHAB, pHAB, tfrecFileIDs, loss])
             duration = duration + (time.time() - startTime)
@@ -167,8 +171,10 @@ def train():
             lossValueSum += np.sqrt(lossValue*(2/(modelParams['activeBatchSize']*8)))
             lossValueAvgPixel = lossValueSum/(step+1)
             #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
-            data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
-
+            imot, ptot, ptpt = data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
+            imo+=imot
+            pto+=ptot
+            ptpt+=ptpt
             if step % FLAGS.printOutStep == 0:
                 numExamplesPerStep = modelParams['activeBatchSize']
                 examplesPerSec = numExamplesPerStep / duration
@@ -178,15 +184,17 @@ def train():
                               'sec/batch), pixelErr = %.3f')
                 logging.info(format_str % (datetime.now(), step, lossValue, examplesPerSec, secPerBatch, lossValueAvgPixel))
 
-            #if step % FLAGS.summaryWriteStep == 0:
-            #    summaryStr = sess.run(summaryOp)
-            #    summaryWriter.add_summary(summaryStr, step)
+            if step % FLAGS.summaryWriteStep == 0:
+                summaryStr = sess.run(summaryOp)
+                summaryWriter.add_summary(summaryStr, step)
 
             # Print Progress Info
             if ((step % FLAGS.imageWarpingProgressStep) == 0) or (step+1 == stepsForOneDataRound):
                 print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Estimated Completion: %.2f mins' % (step/stepsForOneDataRound, lossValueSum/(step+1), duration/60, ((duration*stepsForOneDataRound)/(step+1))/60))
+                print('CORRUPT DATA : IMO %d   PTO %d   PTP %d' % (imo, pto, ptp))
 
         print('Average training loss = %.2f - Average time = %.2f, Steps = %d' % (lossValue/step, duration/step, step))
+        print('CORRUPT DATA : IMO %d   PTO %d   PTP %d' % (imo, pto, ptp))
 
 
 def _setupLogging(logPath):
@@ -221,9 +229,9 @@ def main(argv=None):  # pylint: disable=unused-argumDt
     if input("(Overwrite WARNING) Did you change logs directory? ") != "yes":
         print("Please consider changing logs directory in order to avoid overwrite!")
         return
-    #if tf.gfile.Exists(modelParams['testLogDir']):
-    #    tf.gfile.DeleteRecursively(modelParams['testLogDir'])
-    #tf.gfile.MakeDirs(modelParams['testLogDir'])
+    if tf.gfile.Exists(modelParams['testLogDir']):
+        tf.gfile.DeleteRecursively(modelParams['testLogDir'])
+    tf.gfile.MakeDirs(modelParams['testLogDir'])
     train()
 
 

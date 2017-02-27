@@ -184,7 +184,8 @@ def train():
 
             # Print Progress Info
             if ((step % FLAGS.imageWarpingProgressStep) == 0) or (step+1 == stepsForOneDataRound):
-                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Estimated Completion: %.2f mins' % (step/stepsForOneDataRound, lossValueSum/(step+1), duration/60, ((duration*stepsForOneDataRound)/step+1)/60))
+                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Estimated Completion: %.2f mins' % 
+                        (step/stepsForOneDataRound, lossValueSum/(step+1), duration/60, ((duration*stepsForOneDataRound)/(step+1))/60))
         
         print('Average training loss = %.2f - Average time = %.2f, Steps = %d' % (lossValue/step, duration/step, step))
 

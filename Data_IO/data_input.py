@@ -260,7 +260,7 @@ def inputs(**kwargs):
     
     Raises:
       ValueError: If no dataDir
-    """     
+    """
     with tf.device('/cpu:0'):
         batchImageOrig, batchImage, batchPOrig, batchHAB, tfrecFileID = fetch_inputs(**kwargs)
         
