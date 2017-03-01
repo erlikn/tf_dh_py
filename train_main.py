@@ -50,6 +50,8 @@ tf.app.flags.DEFINE_integer('summaryWriteStep', 100,
                             """Number of batches to run.""")
 tf.app.flags.DEFINE_integer('modelCheckpointStep', 1000,
                             """Number of batches to run.""")
+tf.app.flags.DEFINE_integer('ProgressStepReportStep', 250,
+                            """Number of batches to run.""")
 ####################################################
 def _get_control_params():
     modelParams['phase'] = 'train'
@@ -62,13 +64,13 @@ def _get_control_params():
     if modelParams['phase'] == 'train':
         modelParams['activeBatchSize'] = modelParams['trainBatchSize']
         modelParams['maxSteps'] = modelParams['trainMaxSteps']
-        modelParams['numExamplesPerEpoch'] = modelParams['numTrainDatasetExamples']
+        modelParams['numExamples'] = modelParams['numTrainDatasetExamples']
         modelParams['dataDir'] = modelParams['trainDataDir']
 
     if modelParams['phase'] == 'test':
         modelParams['activeBatchSize'] = modelParams['testBatchSize']
         modelParams['maxSteps'] = modelParams['testMaxSteps']
-        modelParams['numExamplesPerEpoch'] = modelParams['numTestDatasetExamples']
+        modelParams['numExamples'] = modelParams['numTestDatasetExamples']
         modelParams['dataDir'] = modelParams['testDataDir']
 
 
@@ -79,7 +81,7 @@ def train():
         raise ValueError("No such data directory %s" % modelParams['dataDir'])    
 
     minPixelLoss = 999999.99
-
+    lossValueSum = 0
     #meanImgFi1000le = os.path.join(FLAGS.dataDir, "meta")
     #if not os.path.isfile(meanImgFile):
     #    raise ValueError("Warning, no meta file found at %s" % meanImgFile)
@@ -105,7 +107,7 @@ def train():
                                      trainable=False)
 
         # Get images and transformation for model_cnn.
-        images, tHAB, tfrecFileIDs = data_input.inputs(**modelParams)
+        imagesOrig, images, pOrig, tHAB, tfrecFileIDs = data_input.inputs(**modelParams)
 
         # Build a Graph that computes the HAB predictions from the
         # inference model.
@@ -150,6 +152,9 @@ def train():
 
             # Calculate pixel error for current batch
             lossValueSumPixel = np.sqrt(lossValue*(2/(modelParams['activeBatchSize']*8)))
+            lossValueSum += lossValueSumPixel
+            lossValueAvgPixel = lossValueSum/(step+1)
+
 
             if step % FLAGS.printOutStep == 0:
                 numExamplesPerStep = modelParams['activeBatchSize']
@@ -175,7 +180,10 @@ def train():
                 minPixelLoss = lossValueSumPixel
                 checkpointPath = os.path.join(modelParams['trainLogDir'], 'model_minLoss.ckpt')
                 saver.save(sess, checkpointPath)
-
+            # Print Progress Info
+            if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == modelParams['maxSteps']):
+                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % 
+                        (step/modelParams['maxSteps'], lossValueSum/(step+1), duration/60, ((duration*modelParams['maxSteps'])/(step+1))/60))
 
 def _setupLogging(logPath):
     # cleanup

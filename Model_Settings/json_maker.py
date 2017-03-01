@@ -582,6 +582,26 @@ def write_iterative():
         data['batchNorm'] = False
         data['weightNorm'] = True
         write_json_file(runName+'.json', data)
+        ### ITERATION 4
+        runName = '170208_ITR_W_4'
+        data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
+        data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
+        data['trainLogDir'] = trainLogDirBase + runName
+        data['testLogDir'] = testLogDirBase + runName
+        data['warpedTrainDataDir'] = warpedImageTrainBase + runName
+        data['warpedTestDataDir'] = warpedImageTestBase+ runName
+        _set_folders(data['warpedTrainDataDir'])
+        _set_folders(data['warpedTestDataDir'])
+        data['warpOriginalImage'] = True
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 20
+        data['testBatchSize'] = 20
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['batchNorm'] = False
+        data['weightNorm'] = True
+        write_json_file(runName+'.json', data)
 
 ####################################################################################
 ####################################################################################

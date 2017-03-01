@@ -321,7 +321,7 @@ def inference(images, **kwargs): #batchSize=None, phase='train', outLayer=[13,13
         fireOut = tf.nn.dropout(fireOut, keepProb, name="dropout")
     ###### Prepare for fully connected layers
     # Reshape firout - flatten 
-    prevExpandDim = (kwargs.get('imageSize')//(2*2*2))*(kwargs.get('imageSize')//(2*2*2))*prevExpandDim
+    prevExpandDim = (kwargs.get('imageHeight')//(2*2*2))*(kwargs.get('imageWidth')//(2*2*2))*prevExpandDim
     fireOutFlat = tf.reshape(fireOut, [batchSize, -1])
     
     ############# FC1 layer with 1024 outputs

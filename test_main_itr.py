@@ -31,7 +31,7 @@ PHASE = 'test'
 # import json_maker, update json files and read requested json file
 import Model_Settings.json_maker as json_maker
 json_maker.recompile_json_files()
-jsonToRead = '170208_ITR_W_2.json'
+jsonToRead = '170208_ITR_W_4.json'
 print("Reading %s" % jsonToRead)
 with open('Model_Settings/'+jsonToRead) as data_file:
     modelParams = json.load(data_file)
@@ -51,7 +51,7 @@ tf.app.flags.DEFINE_integer('summaryWriteStep', 100,
                             """Number of batches to run.""")
 tf.app.flags.DEFINE_integer('modelCheckpointStep', 1000,
                             """Number of batches to run.""")
-tf.app.flags.DEFINE_integer('imageWarpingProgressStep', 500,
+tf.app.flags.DEFINE_integer('ProgressStepReportStep', 250,
                             """Number of batches to run.""")
 ####################################################
 def _get_control_params():
@@ -65,18 +65,19 @@ def _get_control_params():
     if modelParams['phase'] == 'train':
         modelParams['activeBatchSize'] = modelParams['trainBatchSize']
         modelParams['maxSteps'] = modelParams['trainMaxSteps']
-        modelParams['numExamplesPerEpoch'] = modelParams['numTrainDatasetExamples']
+        modelParams['numExamples'] = modelParams['numTrainDatasetExamples']
         modelParams['dataDir'] = modelParams['trainDataDir']
         modelParams['warpedOutputFolder'] = modelParams['warpedTrainDataDir']
 
     if modelParams['phase'] == 'test':
         modelParams['activeBatchSize'] = modelParams['testBatchSize']
         modelParams['maxSteps'] = modelParams['testMaxSteps']
-        modelParams['numExamplesPerEpoch'] = modelParams['numTestDatasetExamples']
+        modelParams['numExamples'] = modelParams['numTestDatasetExamples']
         modelParams['dataDir'] = modelParams['testDataDir']
         modelParams['warpedOutputFolder'] = modelParams['warpedTestDataDir']
 
-def train():
+
+def test():
     _get_control_params()
 
     if not os.path.exists(modelParams['dataDir']):
@@ -154,7 +155,7 @@ def train():
         ######### USE LATEST STATE TO WARP IMAGES
         lossValueSum = 0
         duration = 0
-        stepsForOneDataRound = int((modelParams['numTrainDatasetExamples']/modelParams['trainBatchSize']))+1
+        stepsForOneDataRound = int((modelParams['numExamples']/modelParams['trainBatchSize']))+1
         print('Warping images with batch size %d in %d steps' % (modelParams['activeBatchSize'], stepsForOneDataRound))
         for step in xrange(stepsForOneDataRound):
             startTime = time.time()
@@ -183,11 +184,11 @@ def train():
                 summaryWriter.add_summary(summaryStr, step)
 
             # Print Progress Info
-            if ((step % FLAGS.imageWarpingProgressStep) == 0) or (step+1 == stepsForOneDataRound):
-                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Estimated Completion: %.2f mins' % 
-                        (step/stepsForOneDataRound, lossValueSum/(step+1), duration/60, ((duration*stepsForOneDataRound)/(step+1))/60))
+            if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == stepsForOneDataRound):
+                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % 
+                        ((100*step)/stepsForOneDataRound, lossValueAvgPixel, duration/60, (((duration*stepsForOneDataRound)/(step+1))/60)-(duration/60) ) )
         
-        print('Average training loss = %.2f - Average time = %.2f, Steps = %d' % (lossValue/step, duration/step, step))
+        print('Average training loss = %.2f - Average time per sample= %.2f s, Steps = %d' % (lossValueAvgPixel, duration/(step*modelParams['activeBatchSize']), step))
 
 
 def _setupLogging(logPath):
@@ -213,19 +214,19 @@ def _setupLogging(logPath):
 
 def main(argv=None):  # pylint: disable=unused-argumDt
     print('Rounds on datase = %.1f' % float((modelParams['testBatchSize']*modelParams['testMaxSteps'])/modelParams['numTestDatasetExamples']))
-    print('Train Input: %s' % modelParams['trainDataDir'])
-    #print('Test  Input: %s' % modelParams['testDataDir'])
+    #print('Train Input: %s' % modelParams['trainDataDir'])
+    print('Test  Input: %s' % modelParams['testDataDir'])
     print('Train Logs Input: %s' % modelParams['trainLogDir'])
-    #print('Test  Logs Output: %s' % modelParams['testLogDir'])
-    print('Train Warp Output: %s' % modelParams['warpedTrainDataDir'])
-    #print('Test  Warp Output: %s' % modelParams['warpedTestDataDir'])
+    print('Test  Logs Output: %s' % modelParams['testLogDir'])
+    #print('Train Warp Output: %s' % modelParams['warpedTrainDataDir'])
+    print('Test  Warp Output: %s' % modelParams['warpedTestDataDir'])
     if input("(Overwrite WARNING) Did you change logs directory? ") != "yes":
         print("Please consider changing logs directory in order to avoid overwrite!")
         return
     if tf.gfile.Exists(modelParams['testLogDir']):
         tf.gfile.DeleteRecursively(modelParams['testLogDir'])
     tf.gfile.MakeDirs(modelParams['testLogDir'])
-    train()
+    test()
 
 
 if __name__ == '__main__':

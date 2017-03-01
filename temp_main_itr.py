@@ -51,7 +51,7 @@ tf.app.flags.DEFINE_integer('summaryWriteStep', 100,
                             """Number of batches to run.""")
 tf.app.flags.DEFINE_integer('modelCheckpointStep', 1000,
                             """Number of batches to run.""")
-tf.app.flags.DEFINE_integer('imageWarpingProgressStep', 500,
+tf.app.flags.DEFINE_integer('ProgressStepReportStep', 250,
                             """Number of batches to run.""")
 ####################################################
 def _get_control_params():
@@ -66,7 +66,7 @@ def _get_control_params():
         print('TRAIN FUCK')
         modelParams['activeBatchSize'] = modelParams['trainBatchSize']
         modelParams['maxSteps'] = modelParams['trainMaxSteps']
-        modelParams['numExamplesPerEpoch'] = modelParams['numTrainDatasetExamples']
+        modelParams['numExamples'] = modelParams['numTrainDatasetExamples']
         modelParams['dataDir'] = modelParams['trainDataDir']
         modelParams['warpedOutputFolder'] = modelParams['warpedTrainDataDir']
 
@@ -74,7 +74,7 @@ def _get_control_params():
         print('FUCKING TEST')
         modelParams['activeBatchSize'] = modelParams['testBatchSize']
         modelParams['maxSteps'] = modelParams['testMaxSteps']
-        modelParams['numExamplesPerEpoch'] = modelParams['numTestDatasetExamples']
+        modelParams['numExamples'] = modelParams['numTestDatasetExamples']
         modelParams['dataDir'] = modelParams['testDataDir']
         modelParams['warpedOutputFolder'] = modelParams['warpedTestDataDir']
 
@@ -189,7 +189,7 @@ def train():
                 summaryWriter.add_summary(summaryStr, step)
 
             # Print Progress Info
-            if ((step % FLAGS.imageWarpingProgressStep) == 0) or (step+1 == stepsForOneDataRound):
+            if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == stepsForOneDataRound):
                 print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Estimated Completion: %.2f mins' % (step/stepsForOneDataRound, lossValueSum/(step+1), duration/60, ((duration*stepsForOneDataRound)/(step+1))/60))
                 print('CORRUPT DATA : IMO %d   PTO %d   PTP %d' % (imo, pto, ptp))
 

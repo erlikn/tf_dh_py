@@ -101,7 +101,7 @@ def generate_random_perturbations(datasetType, img, ID, num, tfRecFolder):
         # get transformation matrix and transform the image to new space
         Hmatrix = cv2.getPerspectiveTransform(np.transpose(pOrig), np.transpose(pPert))
         dst = cv2.warpPerspective(img, Hmatrix, (img.shape[1], img.shape[0]))
-        print(img.shape)
+        #print(img.shape)
         # crop the image at original location
         imgTempPert = dst[pRow:pRow+squareSize, pCol:pCol+squareSize]
         if dst.max() > 256:
@@ -113,7 +113,7 @@ def generate_random_perturbations(datasetType, img, ID, num, tfRecFolder):
             imgTempPert = cv2.resize(imgTempPert, (128,128))
             H_AB = H_AB/2
         perturb_writer(ID, i,
-                       imgTempOrig, imgTempPert, H_AB, pOrig,
+                       img, imgTempOrig, imgTempPert, H_AB, pOrig,
                        tfRecFolder)
         mu = np.average(H_AB, axis=1)
         var = np.sqrt(np.var(H_AB, axis=1))
@@ -136,8 +136,8 @@ def prepare_dataset(datasetType, readFolder, tfRecFolder):
         else: # test
             num = NUM_OF_TEST_PERTURBED_IMAGES
         img = cv2.imread(readFolder+filename, 0)
-        if img.max-img.min > 0:
-            img = (img-img.min())/(img.max-img.min)
+        if img.max()-img.min() > 0:
+            img = (img-img.min())/(img.max()-img.min())
         img = np.asarray(img, np.float32)
         if img.ndim == 2:
             mu, var = generate_random_perturbations(datasetType, img, id, num, tfRecFolder)
@@ -205,10 +205,10 @@ testtfRecordFLD = "../../Data/128_test_tfrecords/"
     generate 5,000x5=25,000 Samples
     Total Files = 25,000 orig + 25,000 pert + 25,000 origSq 25,000 HAB = 100,000 
 """
-#prepare_dataset("test", test640, testtfRecordFLD)
+prepare_dataset("test", test640, testtfRecordFLD)
 """
     Generate more Train Samples
     generate  Samples
     Total Files =  orig +  pert + 25,000 HAB = 
 """
-prepare_dataset("train", train320, traintfRecordFLD)
+#prepare_dataset("train", train320, traintfRecordFLD)

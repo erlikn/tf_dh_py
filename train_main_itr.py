@@ -31,7 +31,7 @@ PHASE = 'train'
 # import json_maker, update json files and read requested json file
 import Model_Settings.json_maker as json_maker
 json_maker.recompile_json_files()
-jsonToRead = '170208_ITR_W_2.json'
+jsonToRead = '170208_ITR_W_4.json'
 print("Reading %s" % jsonToRead)
 with open('Model_Settings/'+jsonToRead) as data_file:
     modelParams = json.load(data_file)
@@ -51,7 +51,7 @@ tf.app.flags.DEFINE_integer('summaryWriteStep', 100,
                             """Number of batches to run.""")
 tf.app.flags.DEFINE_integer('modelCheckpointStep', 1000,
                             """Number of batches to run.""")
-tf.app.flags.DEFINE_integer('imageWarpingProgressStep', 500,
+tf.app.flags.DEFINE_integer('ProgressStepReportStep', 250,
                             """Number of batches to run.""")
 ####################################################
 def _get_control_params():
@@ -65,14 +65,14 @@ def _get_control_params():
     if modelParams['phase'] == 'train':
         modelParams['activeBatchSize'] = modelParams['trainBatchSize']
         modelParams['maxSteps'] = modelParams['trainMaxSteps']
-        modelParams['numExamplesPerEpoch'] = modelParams['numTrainDatasetExamples']
+        modelParams['numExamples'] = modelParams['numTrainDatasetExamples']
         modelParams['dataDir'] = modelParams['trainDataDir']
         modelParams['warpedOutputFolder'] = modelParams['warpedTrainDataDir']
 
     if modelParams['phase'] == 'test':
         modelParams['activeBatchSize'] = modelParams['testBatchSize']
         modelParams['maxSteps'] = modelParams['testMaxSteps']
-        modelParams['numExamplesPerEpoch'] = modelParams['numTestDatasetExamples']
+        modelParams['numExamples'] = modelParams['numTestDatasetExamples']
         modelParams['dataDir'] = modelParams['testDataDir']
         modelParams['warpedOutputFolder'] = modelParams['warpedTestDataDir']
 
@@ -183,27 +183,28 @@ def train():
                 saver.save(sess, checkpointPath)
             
             # Print Progress Info
-            if ((step % FLAGS.imageWarpingProgressStep) == 0) or (step+1 == modelParams['trainMaxSteps']):
+            if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == modelParams['trainMaxSteps']):
                 print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' %
-                        (step/modelParams['trainMaxSteps'], lossValueSum/(step+1), duration/60, ((duration*modelParams['trainMaxSteps'])/(step+1))/60))
+                        ((100*step)/modelParams['trainMaxSteps'], lossValueSum/(step+1), duration/60, (((duration*modelParams['trainMaxSteps'])/(step+1))/60)-(duration/60)))
 
 
         ######### USE LATEST STATE TO WARP IMAGES
         duration = 0
-        stepsForOneDataRound = int((modelParams['numTrainDatasetExamples']/modelParams['trainBatchSize']))+1
+        lossValueSum = 0;
+        stepsForOneDataRound = int((modelParams['numExamples']/modelParams['trainBatchSize']))+1
         print('Warping images with batch size %d in %d steps' % (modelParams['activeBatchSize'], stepsForOneDataRound))
         for step in xrange(stepsForOneDataRound):
             startTime = time.time()
             evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, evlossValue = sess.run([imagesOrig, images, pOrig, tHAB, pHAB, tfrecFileIDs, loss])
-            lossValueSum += np.sqrt(lossValue*(2/(modelParams['activeBatchSize']*8)))
+            lossValueSum += np.sqrt(evlossValue*(2/(modelParams['activeBatchSize']*8)))
             duration = duration + (time.time() - startTime)
             #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
             data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
             # Print Progress Info
-            if ((step % FLAGS.imageWarpingProgressStep) == 0) or (step+1 == stepsForOneDataRound):
+            if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == stepsForOneDataRound):
                 print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % 
-                        (step/stepsForOneDataRound, lossValueSum/(step+1), duration/60, ((duration*stepsForOneDataRound)/(step+1))/60))
-        print('Average training loss = %.2f - Average time = %.2f, Steps = %d' % (lossValue/step, duration/step, step))
+                        ((100*step)/stepsForOneDataRound, lossValueSum/(step+1), duration/60, (((duration*stepsForOneDataRound)/(step+1))/60)-(duration/60) ) )
+        print('Average training loss = %.2f - Average time per sample= %.2f s, Steps = %d' % (lossValueSum/step, duration/(step*modelParams['activeBatchSize']), step))
 
 
 def _setupLogging(logPath):

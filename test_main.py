@@ -26,10 +26,10 @@ import numpy as np
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 #import tensorflow.python.debug as tf_debug
-import data_input
+import Data_IO.data_input as data_input
 
 
-with open('Model_Settings/170130_TWN_MOM_B_8.json') as data_file:
+with open('Model_Settings/170126_SIN_B.json') as data_file:
     modelParams = json.load(data_file)
 
 #### Override Model Parameters for Batch Normalization and Weight Normalization
@@ -49,7 +49,7 @@ tf.app.flags.DEFINE_integer('summaryWriteStep', 100,
                             """Number of batches to run.""")
 tf.app.flags.DEFINE_integer('modelCheckpointStep', 1000,
                             """Number of batches to run.""")
-tf.app.flags.DEFINE_integer('imageWarpingProgressStep', 500,
+tf.app.flags.DEFINE_integer('ProgressStepReportStep', 250,
                             """Number of batches to run.""")
 ####################################################
 def _get_control_params():
@@ -60,13 +60,13 @@ def _get_control_params():
     if modelParams['phase'] == 'train':
         modelParams['activeBatchSize'] = modelParams['trainBatchSize']
         modelParams['maxSteps'] = modelParams['trainMaxSteps']
-        modelParams['numExamplesPerEpoch'] = modelParams['numTrainDatasetExamples']
+        modelParams['numExamples'] = modelParams['numTrainDatasetExamples']
         modelParams['dataDir'] = modelParams['trainDataDir']
     
     if modelParams['phase'] == 'test':
         modelParams['activeBatchSize'] = modelParams['testBatchSize']
         modelParams['maxSteps'] = modelParams['testMaxSteps']
-        modelParams['numExamplesPerEpoch'] = modelParams['numTestDatasetExamples']
+        modelParams['numExamples'] = modelParams['numTestDatasetExamples']
         modelParams['dataDir'] = modelParams['testDataDir']
     
     modelParams['batchNorm'] = False
@@ -92,7 +92,8 @@ def test():
                                      trainable=False)
 
         # Get images and transformation for model_cnn.
-        images, tHAB, patchInds = data_input.inputs(**modelParams)
+        #batchImageOrig, batchImage, batchPOrig, batchHAB, tfrecFileID
+        batchImageOrig, images, batchPOrig, tHAB, tfrecFileID = data_input.inputs(**modelParams)
 
         # Build a Graph that computes the HAB predictions from the
         # inference model.
@@ -160,8 +161,9 @@ def test():
             #    checkpoint_path = os.path.join(FLAGS.testLogDir, 'model.ckpt')
             #    saver.save(sess, checkpoint_path, global_step=step)
             # Print Progress Info
-            if ((step % FLAGS.imageWarpingProgressStep) == 0) or (step+1 == modelParams['maxSteps']):
-                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % (step/modelParams['maxSteps'], lossValueSum/(step+1), duration/60, ((duration*modelParams['maxSteps'])/step+1)/60))
+            if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == modelParams['maxSteps']):
+                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % 
+                        (step/modelParams['maxSteps'], lossValueAvgPixel, duration/60, ((duration*modelParams['maxSteps'])/(step+1))/60))
 
 
 def _setupLogging(logPath):
