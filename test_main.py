@@ -29,7 +29,7 @@ import tensorflow as tf
 import Data_IO.data_input as data_input
 
 
-with open('Model_Settings/170126_SIN_B.json') as data_file:
+with open('Model_Settings/170126_SIN_W.json') as data_file:
     modelParams = json.load(data_file)
 
 #### Override Model Parameters for Batch Normalization and Weight Normalization
@@ -40,6 +40,7 @@ modelParams['weightNorm'] = False
 # import corresponding model name as model_cnn
 model_cnn = importlib.import_module('Model_Factory.'+modelParams['modelName'])
 
+PHASE = 'test'
 ####################################################
 FLAGS = tf.app.flags.FLAGS
 
@@ -53,8 +54,8 @@ tf.app.flags.DEFINE_integer('ProgressStepReportStep', 250,
                             """Number of batches to run.""")
 ####################################################
 def _get_control_params():
-    modelParams['phase'] = 'test'
-    
+    modelParams['phase'] = PHASE
+
     modelParams['existingParams'] = None
 
     if modelParams['phase'] == 'train':
@@ -62,16 +63,16 @@ def _get_control_params():
         modelParams['maxSteps'] = modelParams['trainMaxSteps']
         modelParams['numExamples'] = modelParams['numTrainDatasetExamples']
         modelParams['dataDir'] = modelParams['trainDataDir']
-    
+
     if modelParams['phase'] == 'test':
         modelParams['activeBatchSize'] = modelParams['testBatchSize']
         modelParams['maxSteps'] = modelParams['testMaxSteps']
         modelParams['numExamples'] = modelParams['numTestDatasetExamples']
         modelParams['dataDir'] = modelParams['testDataDir']
-    
+
     modelParams['batchNorm'] = False
     modelParams['weightNorm'] = False
-    
+
 
 def test():
     _get_control_params()
@@ -82,7 +83,7 @@ def test():
     lossValueSum = 0
 
     _setupLogging(os.path.join(modelParams['testLogDir'], "genlog"))
-    
+
     with tf.Graph().as_default():
 
         # track the number of train calls (basically number of batches processed)

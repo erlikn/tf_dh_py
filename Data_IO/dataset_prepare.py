@@ -5,6 +5,8 @@ import cv2 as cv2
 from os import listdir
 from os.path import isfile, join
 from os import walk
+from datetime import datetime
+import time
 import math
 import random
 from shutil import copy
@@ -93,8 +95,8 @@ def generate_random_perturbations(datasetType, img, ID, num, tfRecFolder):
         pOrig = np.array([[pRow, pRow, pRow+squareSize, pRow+squareSize],
                           [pCol, pCol+squareSize, pCol, pCol+squareSize]], np.float32)
         # generate random perturbations (H^AB)
-        rndListRowPert = np.asarray(random.sample(range(-32, 32), 4))
-        rndListColPert = np.asarray(random.sample(range(-32, 32), 4))
+        rndListRowPert = np.asarray(random.sample(range(-thrPerturbation, thrPerturbation), 4))
+        rndListColPert = np.asarray(random.sample(range(-thrPerturbation, thrPerturbation), 4))
         H_AB = np.asarray([rndListRowPert, rndListColPert], np.float32)
         #
         pPert = np.asarray(pOrig+H_AB)
@@ -124,6 +126,8 @@ def prepare_dataset(datasetType, readFolder, tfRecFolder):
     filenames.sort()
     #
     id = 0
+    durationSum = 0
+    startTime = time.time()
     totalCount = 0
     tMu = np.asarray([0.0, 0.0])
     tVar = np.asarray([0.0, 0.0])
@@ -147,8 +151,11 @@ def prepare_dataset(datasetType, readFolder, tfRecFolder):
         else:
             print("Not a grayscale")
         if math.floor((id*50)/len(filenames)) != math.floor(((id-1)*50)/len(filenames)):
+            durationSum += time.time() - startTime
             print(str(math.floor((id*100)/len(filenames)))+'%  '+str(id))
             print('Perturbation Statistics: MuXY = %.1f, %.1f , VarXY = %.1f, %.1f , Files = %d' % (mu[0], mu[1], var[0], var[1], totalCount))
+            print('Elapsed Time: %.2f minutes, To Completion: %.2f minutes' % (durationSum/60, (((durationSum*len(filenames))/(id+1))-durationSum)/60))
+            startTime = time.time()
         id = id+1
     i=id
     print('100%  Done')

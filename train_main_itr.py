@@ -31,7 +31,7 @@ PHASE = 'train'
 # import json_maker, update json files and read requested json file
 import Model_Settings.json_maker as json_maker
 json_maker.recompile_json_files()
-jsonToRead = '170208_ITR_W_4.json'
+jsonToRead = '170301_ITR_W_1.json'
 print("Reading %s" % jsonToRead)
 with open('Model_Settings/'+jsonToRead) as data_file:
     modelParams = json.load(data_file)
@@ -135,7 +135,10 @@ def train():
 
         opCheck = tf.add_check_numerics_ops()
         # Start running operations on the Graph.
-        sess = tf.Session(config=tf.ConfigProto(log_device_placement=modelParams['logDevicePlacement']))
+        config = tf.ConfigProto(log_device_placement=modelParams['logDevicePlacement'])
+        config.graph_options.optimizer_options.global_jit_level = tf.OptimizerOptions.ON_1
+        sess = tf.Session(config = config)
+        
         #sess = tf_debug.LocalCLIDebugWrapperSession(sess)
         #sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
         sess.run(init)
@@ -146,11 +149,12 @@ def train():
         summaryWriter = tf.summary.FileWriter(modelParams['trainLogDir'], sess.graph)
         
         lossValueSum = 0
+        durationSum = 0
         for step in xrange(modelParams['maxSteps']):
             startTime = time.time()
             _, lossValue = sess.run([opTrain, loss])
             duration = time.time() - startTime
-
+            durationSum += duration 
             assert not np.isnan(lossValue), 'Model diverged with loss = NaN'
 
             # Calculate pixel error for current batch
@@ -185,11 +189,10 @@ def train():
             # Print Progress Info
             if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == modelParams['trainMaxSteps']):
                 print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' %
-                        ((100*step)/modelParams['trainMaxSteps'], lossValueSum/(step+1), duration/60, (((duration*modelParams['trainMaxSteps'])/(step+1))/60)-(duration/60)))
+                        ((100*step)/modelParams['trainMaxSteps'], lossValueSum/(step+1), durationSum/60, (((durationSum*modelParams['trainMaxSteps'])/(step+1))/60)-(durationSum/60)))
 
 
         ######### USE LATEST STATE TO WARP IMAGES
-        duration = 0
         lossValueSum = 0;
         stepsForOneDataRound = int((modelParams['numExamples']/modelParams['trainBatchSize']))+1
         print('Warping images with batch size %d in %d steps' % (modelParams['activeBatchSize'], stepsForOneDataRound))
@@ -197,14 +200,14 @@ def train():
             startTime = time.time()
             evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, evlossValue = sess.run([imagesOrig, images, pOrig, tHAB, pHAB, tfrecFileIDs, loss])
             lossValueSum += np.sqrt(evlossValue*(2/(modelParams['activeBatchSize']*8)))
-            duration = duration + (time.time() - startTime)
+            durationSum += (time.time() - startTime)
             #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
             data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
             # Print Progress Info
             if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == stepsForOneDataRound):
                 print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % 
-                        ((100*step)/stepsForOneDataRound, lossValueSum/(step+1), duration/60, (((duration*stepsForOneDataRound)/(step+1))/60)-(duration/60) ) )
-        print('Average training loss = %.2f - Average time per sample= %.2f s, Steps = %d' % (lossValueSum/step, duration/(step*modelParams['activeBatchSize']), step))
+                        ((100*step)/stepsForOneDataRound, lossValueSum/(step+1), durationSum/60, (((durationSum*stepsForOneDataRound)/(step+1))/60)-(durationSum/60) ) )
+        print('Average training loss = %.2f - Average time per sample= %.2f s, Steps = %d' % (lossValueSum/step, durationSum/(step*modelParams['activeBatchSize']), step))
 
 
 def _setupLogging(logPath):
@@ -229,6 +232,7 @@ def _setupLogging(logPath):
     logging.info("Logging setup complete to %s" % logPath)
 
 def main(argv=None):  # pylint: disable=unused-argumDt
+    print(modelParams['modelName'])
     print('Rounds on datase = %.1f' % float((modelParams['trainBatchSize']*modelParams['trainMaxSteps'])/modelParams['numTrainDatasetExamples']))
     print('Train Input: %s' % modelParams['trainDataDir'])
     #print('Test  Input: %s' % modelParams['testDataDir'])

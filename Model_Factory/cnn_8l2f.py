@@ -415,7 +415,6 @@ def train(loss, globalStep, **kwargs):
     # Variables that affect learning rate.
     numExamplesPerEpochForTrain = kwargs.get('numExamplesPerEpoch') #56016 #56658   # <--------------?????
     #numBatchesPerEpoch = numExamplesPerEpochForTrain / kwargs.get('activeBatchSize')
-    print("Using %d example for phase %s" % (numExamplesPerEpochForTrain, kwargs.get('phase'))) # <--------------?????
 
     # 0.005 for [0,30000] -> 0.0005 for [30001,60000], 0.00005 for [60001, 90000]
     # [30000, 60000]
@@ -466,7 +465,6 @@ def test(loss, globalStep, **kwargs):
     ##############################
     # Variables that affect learning rate.
     numExamplesPerEpochForTest = kwargs.get('numExamplesPerEpoch') #56016 #56658   # <--------------?????
-    print("Using %d example for phase %s" % (numExamplesPerEpochForTest, kwargs.get('phase'))) # <--------------?????
     
     # Generate moving averages of all losses and associated summaries.
     lossAveragesOp = _add_loss_summaries(loss, kwargs.get('activeBatchSize', None))

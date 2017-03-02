@@ -30,7 +30,7 @@ import tensorflow as tf
 # import json_maker, update json files and read requested json file
 import Model_Settings.json_maker as json_maker
 json_maker.recompile_json_files()
-jsonToRead = '170213_TRES_B.json'
+jsonToRead = '170126_SIN_B.json'
 print("Reading %s" % jsonToRead)
 with open('Model_Settings/'+jsonToRead) as data_file:
     modelParams = json.load(data_file)

@@ -213,6 +213,7 @@ def _setupLogging(logPath):
     logging.info("Logging setup complete to %s" % logPath)
 
 def main(argv=None):  # pylint: disable=unused-argumDt
+    print(modelParams['modelName'])
     print('Rounds on datase = %.1f' % float((modelParams['testBatchSize']*modelParams['testMaxSteps'])/modelParams['numTestDatasetExamples']))
     #print('Train Input: %s' % modelParams['trainDataDir'])
     print('Test  Input: %s' % modelParams['testDataDir'])
