@@ -31,7 +31,7 @@ PHASE = 'test'
 # import json_maker, update json files and read requested json file
 import Model_Settings.json_maker as json_maker
 json_maker.recompile_json_files()
-jsonToRead = '170208_ITR_W_4.json'
+jsonToRead = '170126_SIN_B.json'
 print("Reading %s" % jsonToRead)
 with open('Model_Settings/'+jsonToRead) as data_file:
     modelParams = json.load(data_file)
@@ -143,7 +143,7 @@ def test():
         #sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
         sess.run(init)
 
-         # restore a saver.
+        # restore a saver.
         saver = tf.train.Saver(tf.global_variables())
         saver.restore(sess, modelParams['trainLogDir']+'/model.ckpt-'+str(modelParams['trainMaxSteps']-1))
 
@@ -165,9 +165,9 @@ def test():
             assert not np.isnan(lossValue), 'Model diverged with loss = NaN'
 
             lossValueSum += np.sqrt(lossValue*(2/(modelParams['activeBatchSize']*8)))
-            lossValueAvgPixel = lossValueSum/(step+1)
             #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
-            data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
+            if modelParams['writeWarpedImages']:
+                data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
             
             if step % FLAGS.printOutStep == 0:
                 numExamplesPerStep = modelParams['activeBatchSize']
@@ -177,7 +177,7 @@ def test():
                 format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
                               'sec/batch), pixelErr = %.3f')
                 logging.info(format_str % (datetime.now(), step, lossValue,
-                                     examplesPerSec, secPerBatch, lossValueAvgPixel))
+                                     examplesPerSec, secPerBatch, lossValueSum/(step+1)))
             
             if step % FLAGS.summaryWriteStep == 0:
                 summaryStr = sess.run(summaryOp)
@@ -186,9 +186,9 @@ def test():
             # Print Progress Info
             if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == stepsForOneDataRound):
                 print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % 
-                        ((100*step)/stepsForOneDataRound, lossValueAvgPixel, duration/60, (((duration*stepsForOneDataRound)/(step+1))/60)-(duration/60) ) )
+                        ((100*step)/stepsForOneDataRound, lossValueSum/(step+1), duration/60, (((duration*stepsForOneDataRound)/(step+1))/60)-(duration/60) ) )
         
-        print('Average training loss = %.2f - Average time per sample= %.2f s, Steps = %d' % (lossValueAvgPixel, duration/(step*modelParams['activeBatchSize']), step))
+        print('Average training loss = %.2f - Average time per sample= %.2f s, Steps = %d' % (lossValueSum/(step+1), duration/(step*modelParams['activeBatchSize']), step))
 
 
 def _setupLogging(logPath):

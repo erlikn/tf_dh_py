@@ -44,6 +44,7 @@ trainLogDir_desc = "Directory where to write train event logs and checkpoints"
 testLogDir_desc = "Directory where to write test event logs and checkpoints"
 warpedTrainDataDir_desc = "Directory where to write wrapped train images"
 warpedTestDataDir_desc = "Directory where to write wrapped test images"
+writeWarpedImages_desc = "Flag showing if warped images should be written"
 
 imageHeight_desc = "Image Patch Height"
 imageWidth_desc = "Image Patch Width"
@@ -92,6 +93,7 @@ trainLogDir = trainLogDirBase+'170127_TWN_MOM_W'
 testLogDir = testLogDirBase+'170127_TWN_MOM_W'
 warpedTrainDataDir = warpedImageTrainBase+' '
 warpedTestDataDir = warpedImageTestBase+' '
+writeWarpedImages = False
 
 imageHeight = 128
 imageWidth = 128
@@ -139,6 +141,7 @@ data = {'modelName' : modelName,
         'testLogDir' : testLogDir,
         'warpedTrainDataDir' : warpedTrainDataDir,
         'warpedTestDataDir' : warpedTestDataDir,
+        'writeWarpedImages' : writeWarpedImages,
 
         'imageHeight' : imageHeight,
         'imageWidth' : imageWidth,
@@ -187,6 +190,7 @@ data = {'modelName' : modelName,
         'testLogDir_desc' : testLogDir_desc,
         'warpedTrainDataDir_desc' : warpedTrainDataDir_desc,
         'warpedTestDataDir_desc' : warpedTestDataDir_desc,
+        'writeWarpedImages_desc' : writeWarpedImages_desc,
 
         'imageHeight_desc' : imageHeight_desc,
         'imageWidth_desc' : imageWidth_desc,
@@ -233,6 +237,8 @@ def write_twin():
     testLogDirBase = '../Data/128_logs/tfdh_twin_py_logs/test_logs/'
     trainDataDir = '../Data/128_train_tfrecords'
     testDataDir = '../Data/128_test_tfrecords'
+
+    writeWarpedImages = False
 
     if reCompileJSON:
         data['trainLogDir'] = trainLogDirBase+'170127_TWN_MOM_W'
@@ -426,6 +432,8 @@ def write_single():
 
     data['modelName'] = 'cnn_8l2f'
 
+    writeWarpedImages = False
+
     ##############
     if reCompileJSON:
         data['trainLogDir'] = trainLogDirBase+'170126_SIN_B'
@@ -485,8 +493,9 @@ def write_twin_correlation():
     trainDataDir = '../Data/128_train_tfrecords'
     testDataDir = '../Data/128_test_tfrecords'
 
-
     data['modelName'] = 'twin_cnn_4pCorr4l2f'
+
+    writeWarpedImages = False
 
     ##############
     if reCompileJSON:
@@ -515,7 +524,9 @@ def write_iterative():
     # Twin Correlation Matching Common Parameters
     trainLogDirBase = '../Data/128_logs/tfdh_iterative_logs/train_logs/'
     testLogDirBase = '../Data/128_logs/tfdh_iterative_logs/test_logs/'
-    
+
+    writeWarpedImages = True
+
     # Iterative model only changes the wayoutput is written, 
     # so any model can be used by ease
 
@@ -701,6 +712,8 @@ def write_residual():
 
     data['modelName'] = 'twin_cnn_res_4p4l2f'
 
+    writeWarpedImages = False
+    
     ##############
     if reCompileJSON:
         data['trainLogDir'] = trainLogDirBase+'170213_TRES_B'

@@ -193,26 +193,27 @@ def train():
 
 
         ######### USE LATEST STATE TO WARP IMAGES
-        lossValueSum = 0;
-        stepsForOneDataRound = int((modelParams['numExamples']/modelParams['trainBatchSize']))+1
-        print('Warping images with batch size %d in %d steps' % (modelParams['activeBatchSize'], stepsForOneDataRound))
-        for step in xrange(stepsForOneDataRound):
-            startTime = time.time()
-            evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, evlossValue = sess.run([imagesOrig, images, pOrig, tHAB, pHAB, tfrecFileIDs, loss])
-            lossValueSum += np.sqrt(evlossValue*(2/(modelParams['activeBatchSize']*8)))
-            durationSum += (time.time() - startTime)
-            #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
-            data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
-            # Print Progress Info
-            if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == stepsForOneDataRound):
-                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % 
-                        ((100*step)/stepsForOneDataRound, lossValueSum/(step+1), durationSum/60, (((durationSum*stepsForOneDataRound)/(step+1))/60)-(durationSum/60) ) )
-        print('Average training loss = %.2f - Average time per sample= %.2f s, Steps = %d' % (lossValueSum/step, durationSum/(step*modelParams['activeBatchSize']), step))
+        if modelParams['writeWarpedImages']:
+            lossValueSum = 0
+            stepsForOneDataRound = int((modelParams['numExamples']/modelParams['trainBatchSize']))+1
+            print('Warping images with batch size %d in %d steps' % (modelParams['activeBatchSize'], stepsForOneDataRound))
+            for step in xrange(stepsForOneDataRound):
+                startTime = time.time()
+                evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, evlossValue = sess.run([imagesOrig, images, pOrig, tHAB, pHAB, tfrecFileIDs, loss])
+                lossValueSum += np.sqrt(evlossValue*(2/(modelParams['activeBatchSize']*8)))
+                durationSum += (time.time() - startTime)
+                #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
+                data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
+                # Print Progress Info
+                if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == stepsForOneDataRound):
+                    print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % 
+                            ((100*step)/stepsForOneDataRound, lossValueSum/(step+1), durationSum/60, (((durationSum*stepsForOneDataRound)/(step+1))/60)-(durationSum/60) ) )
+            print('Average training loss = %.2f - Average time per sample= %.2f s, Steps = %d' % (lossValueSum/step, durationSum/(step*modelParams['activeBatchSize']), step))
 
 
 def _setupLogging(logPath):
     # cleanup
-    if (os.path.isfile(logPath)):
+    if os.path.isfile(logPath):
         os.remove(logPath)
 
     logging.basicConfig(level=logging.DEBUG,

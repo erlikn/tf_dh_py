@@ -26,24 +26,25 @@ import numpy as np
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 #import tensorflow.python.debug as tf_debug
-import Data_IO.data_input as data_input
-
-
-with open('Model_Settings/170126_SIN_W.json') as data_file:
-    modelParams = json.load(data_file)
-
-#### Override Model Parameters for Batch Normalization and Weight Normalization
-modelParams['batchNorm'] = False
-modelParams['weightNorm'] = False
-####
-
-# import corresponding model name as model_cnn
-model_cnn = importlib.import_module('Model_Factory.'+modelParams['modelName'])
 
 PHASE = 'test'
+# import json_maker, update json files and read requested json file
+import Model_Settings.json_maker as json_maker
+json_maker.recompile_json_files()
+jsonToRead = '170208_ITR_W_1.json'
+print("Reading %s" % jsonToRead)
+with open('Model_Settings/'+jsonToRead) as data_file:
+    modelParams = json.load(data_file)
+
+# import input & output modules 
+import Data_IO.data_input as data_input
+import Data_IO.data_output as data_output
+
+# import corresponding model name as model_cnn, specifed at json file
+model_cnn = importlib.import_module('Model_Factory.'+modelParams['modelName'])
+
 ####################################################
 FLAGS = tf.app.flags.FLAGS
-
 tf.app.flags.DEFINE_integer('printOutStep', 10,
                             """Number of batches to run.""")
 tf.app.flags.DEFINE_integer('summaryWriteStep', 100,
@@ -55,36 +56,52 @@ tf.app.flags.DEFINE_integer('ProgressStepReportStep', 250,
 ####################################################
 def _get_control_params():
     modelParams['phase'] = PHASE
+    #params['shardMeta'] = model_cnn.getShardsMetaInfo(FLAGS.dataDir, params['phase'])
 
     modelParams['existingParams'] = None
+    if modelParams['initExistingWeights'] is not None and modelParams['initExistingWeights'] != "":
+        modelParams['existingParams'] = np.load(modelParams['initExistingWeights']).item()
 
     if modelParams['phase'] == 'train':
         modelParams['activeBatchSize'] = modelParams['trainBatchSize']
         modelParams['maxSteps'] = modelParams['trainMaxSteps']
         modelParams['numExamples'] = modelParams['numTrainDatasetExamples']
         modelParams['dataDir'] = modelParams['trainDataDir']
+        modelParams['warpedOutputFolder'] = modelParams['warpedTrainDataDir']
 
     if modelParams['phase'] == 'test':
         modelParams['activeBatchSize'] = modelParams['testBatchSize']
         modelParams['maxSteps'] = modelParams['testMaxSteps']
         modelParams['numExamples'] = modelParams['numTestDatasetExamples']
         modelParams['dataDir'] = modelParams['testDataDir']
-
-    modelParams['batchNorm'] = False
-    modelParams['weightNorm'] = False
+        modelParams['warpedOutputFolder'] = modelParams['warpedTestDataDir']
 
 
 def test():
     _get_control_params()
 
     if not os.path.exists(modelParams['dataDir']):
-        raise ValueError("No such data directory %s" % modelParams['dataDir'])
+        raise ValueError("No such data directory %s" % modelParams['dataDir'])    
 
-    lossValueSum = 0
+    minPixelLoss = 999999.99
+
+    #meanImgFi1000le = os.path.join(FLAGS.dataDir, "meta")
+    #if not os.path.isfile(meanImgFile):
+    #    raise ValueError("Warning, no meta file found at %s" % meanImgFile)
+    #else:
+    #    with open(meanImgFile, "r") as inMeanFile:
+    #        meanInfo = json.load(inMeanFile)
+    #
+    #    meanImg = meanInfo['mean']
+    #
+    #    # also load the target output sizes
+    #    params['targSz'] = meanInfo["targSz"]
 
     _setupLogging(os.path.join(modelParams['testLogDir'], "genlog"))
 
     with tf.Graph().as_default():
+        # BGR to RGB
+        #params['meanImg'] = tf.constant(meanImg, dtype=tf.float32)
 
         # track the number of train calls (basically number of batches processed)
         globalStep = tf.get_variable('globalStep',
@@ -93,8 +110,7 @@ def test():
                                      trainable=False)
 
         # Get images and transformation for model_cnn.
-        #batchImageOrig, batchImage, batchPOrig, batchHAB, tfrecFileID
-        batchImageOrig, images, batchPOrig, tHAB, tfrecFileID = data_input.inputs(**modelParams)
+        imagesOrig, images, pOrig, tHAB, tfrecFileIDs = data_input.inputs(**modelParams)
 
         # Build a Graph that computes the HAB predictions from the
         # inference model.
@@ -105,8 +121,11 @@ def test():
 
         # Build a Graph that trains the model with one batch of examples and
         # updates the model parameters.
-        opTest = model_cnn.test(loss, globalStep, **modelParams)
+        opTrain = model_cnn.test(loss, globalStep, **modelParams)
         ##############################
+
+        # Create a saver.
+        saver = tf.train.Saver(tf.global_variables())
 
         # Build the summary operation based on the TF collection of Summaries.
         summaryOp = tf.summary.merge_all()
@@ -133,15 +152,22 @@ def test():
 
         summaryWriter = tf.summary.FileWriter(modelParams['testLogDir'], sess.graph)
 
-        for step in xrange(modelParams['maxSteps']):
+        ######### USE LATEST STATE TO WARP IMAGES
+        lossValueSum = 0
+        duration = 0
+        stepsForOneDataRound = int((modelParams['numExamples']/modelParams['trainBatchSize']))+1
+        print('Warping images with batch size %d in %d steps' % (modelParams['activeBatchSize'], stepsForOneDataRound))
+        for step in xrange(stepsForOneDataRound):
             startTime = time.time()
-            _, lossValue = sess.run([opTest, loss])
-            duration = time.time() - startTime
+            evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, lossValue = sess.run([imagesOrig, images, pOrig, tHAB, pHAB, tfrecFileIDs, loss])
+            duration = duration + (time.time() - startTime)
 
             assert not np.isnan(lossValue), 'Model diverged with loss = NaN'
 
             lossValueSum += np.sqrt(lossValue*(2/(modelParams['activeBatchSize']*8)))
             lossValueAvgPixel = lossValueSum/(step+1)
+            #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
+            #data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
             
             if step % FLAGS.printOutStep == 0:
                 numExamplesPerStep = modelParams['activeBatchSize']
@@ -157,55 +183,52 @@ def test():
                 summaryStr = sess.run(summaryOp)
                 summaryWriter.add_summary(summaryStr, step)
 
-            # Save the model checkpoint periodically.
-            #if step % FLAGS.modelCheckpointStep == 0 or (step + 1) == FLAGS.maxSteps:
-            #    checkpoint_path = os.path.join(FLAGS.testLogDir, 'model.ckpt')
-            #    saver.save(sess, checkpoint_path, global_step=step)
             # Print Progress Info
-            if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == modelParams['maxSteps']):
+            if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == stepsForOneDataRound):
                 print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % 
-                        (step/modelParams['maxSteps'], lossValueAvgPixel, duration/60, ((duration*modelParams['maxSteps'])/(step+1))/60))
+                        ((100*step)/stepsForOneDataRound, lossValueAvgPixel, duration/60, (((duration*stepsForOneDataRound)/(step+1))/60)-(duration/60) ) )
+        
+        print('Average training loss = %.2f - Average time per sample= %.2f s, Steps = %d' % (lossValueAvgPixel, duration/(step*modelParams['activeBatchSize']), step))
 
 
 def _setupLogging(logPath):
     # cleanup
     if (os.path.isfile(logPath)):
         os.remove(logPath)
-        
+
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                         datefmt='%m-%d %H:%M',
                         filename=logPath,
                         filemode='w')
-    
+
     # also write out to the console
     console = logging.StreamHandler()
     console.setLevel(logging.DEBUG)
     console.setFormatter(logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s'))
-    
+
     # add the handler to the root logger
     logging.getLogger().addHandler(console)
-    
+
     logging.info("Logging setup complete to %s" % logPath)
 
 def main(argv=None):  # pylint: disable=unused-argumDt
-    #if argv[1]:
-    #    jsonFileName = argv[1]
-    #else:
-    #    print('please choose a json file')
-    #    return
-    print('Rounds on datase = %.1f' % float((modelParams['trainBatchSize']*modelParams['trainMaxSteps'])/modelParams['numTrainDatasetExamples']))
-    print(modelParams['trainLogDir'])
-    print(modelParams['testLogDir'])
-    if input("(Overwrite WARNING) Are you sure about this logs directory? ") != "yes":
+    print(modelParams['modelName'])
+    print('Rounds on datase = %.1f' % float((modelParams['testBatchSize']*modelParams['testMaxSteps'])/modelParams['numTestDatasetExamples']))
+    #print('Train Input: %s' % modelParams['trainDataDir'])
+    print('Test  Input: %s' % modelParams['testDataDir'])
+    print('Train Logs Input: %s' % modelParams['trainLogDir'])
+    print('Test  Logs Output: %s' % modelParams['testLogDir'])
+    #print('Train Warp Output: %s' % modelParams['warpedTrainDataDir'])
+    print('Test  Warp Output: %s' % modelParams['warpedTestDataDir'])
+    if input("(Overwrite WARNING) Did you change logs directory? ") != "yes":
         print("Please consider changing logs directory in order to avoid overwrite!")
         return
     if tf.gfile.Exists(modelParams['testLogDir']):
         tf.gfile.DeleteRecursively(modelParams['testLogDir'])
     tf.gfile.MakeDirs(modelParams['testLogDir'])
     test()
-    print('Model Shape = %s' % modelParams['modelShape'])
-    print('BNORM = %s , WNORM = %s' % (modelParams['batchNorm'], modelParams['weightNorm']))
+
 
 if __name__ == '__main__':
     # looks up in the module named "__main__" (which is this module since its whats being run) in the sys.modules

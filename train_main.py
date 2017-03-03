@@ -118,7 +118,7 @@ def train():
 
         # Build a Graph that trains the model with one batch of examples and
         # updates the model parameters.
-        opTrain = model_cnn.train(loss, globalStep, **modelParams)
+        opTrain = model_cnn.test(loss, globalStep, **modelParams)
         ##############################
 
         # Create a saver.
@@ -138,6 +138,10 @@ def train():
         #sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
         sess.run(init)
 
+        # restore a saver.
+        saver = tf.train.Saver(tf.global_variables())
+        saver.restore(sess, modelParams['trainLogDir']+'/model.ckpt-'+str(modelParams['trainMaxSteps']-1))
+
         # Start the queue runners.
         tf.train.start_queue_runners(sess=sess)
 
@@ -155,31 +159,32 @@ def train():
             lossValueSum += lossValueSumPixel
             lossValueAvgPixel = lossValueSum/(step+1)
 
+            print(lossValueSumPixel)
 
-            if step % FLAGS.printOutStep == 0:
-                numExamplesPerStep = modelParams['activeBatchSize']
-                examplesPerSec = numExamplesPerStep / duration
-                secPerBatch = float(duration)
-
-                format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
-                              'sec/batch)')
-                logging.info(format_str % (datetime.now(), step, lossValue,
-                                           examplesPerSec, secPerBatch))
-
-            if step % FLAGS.summaryWriteStep == 0:
-                summaryStr = sess.run(summaryOp)
-                summaryWriter.add_summary(summaryStr, step)
-
-            # Save the model checkpoint periodically.
-            if step % FLAGS.modelCheckpointStep == 0 or (step + 1) == modelParams['maxSteps']:
-                checkpointPath = os.path.join(modelParams['trainLogDir'], 'model.ckpt')
-                saver.save(sess, checkpointPath, global_step=step)
-
-            if step > 10000 and lossValueSumPixel < minPixelLoss:
-                print('saving min loss state')
-                minPixelLoss = lossValueSumPixel
-                checkpointPath = os.path.join(modelParams['trainLogDir'], 'model_minLoss.ckpt')
-                saver.save(sess, checkpointPath)
+            #if step % FLAGS.printOutStep == 0:
+            #    numExamplesPerStep = modelParams['activeBatchSize']
+            #    examplesPerSec = numExamplesPerStep / duration
+            #    secPerBatch = float(duration)
+#
+            #    format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
+            #                  'sec/batch)')
+            #    logging.info(format_str % (datetime.now(), step, lossValue,
+            #                               examplesPerSec, secPerBatch))
+#
+            #if step % FLAGS.summaryWriteStep == 0:
+            #    summaryStr = sess.run(summaryOp)
+            #    summaryWriter.add_summary(summaryStr, step)
+#
+            ## Save the model checkpoint periodically.
+            #if step % FLAGS.modelCheckpointStep == 0 or (step + 1) == modelParams['maxSteps']:
+            #    checkpointPath = os.path.join(modelParams['trainLogDir'], 'model.ckpt')
+            #    saver.save(sess, checkpointPath, global_step=step)
+#
+            #if step > 10000 and lossValueSumPixel < minPixelLoss:
+            #    print('saving min loss state')
+            #    minPixelLoss = lossValueSumPixel
+            #    checkpointPath = os.path.join(modelParams['trainLogDir'], 'model_minLoss.ckpt')
+            #    saver.save(sess, checkpointPath)
             # Print Progress Info
             if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == modelParams['maxSteps']):
                 print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % 
