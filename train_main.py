@@ -31,7 +31,7 @@ PHASE = 'train'
 # import json_maker, update json files and read requested json file
 import Model_Settings.json_maker as json_maker
 json_maker.recompile_json_files()
-jsonToRead = '170301_ITR_W_1.json'
+jsonToRead = '170126_SIN_B.json'
 print("Reading %s" % jsonToRead)
 with open('Model_Settings/'+jsonToRead) as data_file:
     modelParams = json.load(data_file)
@@ -81,8 +81,6 @@ def train():
 
     if not os.path.exists(modelParams['dataDir']):
         raise ValueError("No such data directory %s" % modelParams['dataDir'])    
-
-    minPixelLoss = 999999.99
 
     #meanImgFi1000le = os.path.join(FLAGS.dataDir, "meta")
     #if not os.path.isfile(meanImgFile):
@@ -158,8 +156,8 @@ def train():
             assert not np.isnan(lossValue), 'Model diverged with loss = NaN'
 
             # Calculate pixel error for current batch
-            lossValueSumPixel = np.sqrt(lossValue*(2/(modelParams['activeBatchSize']*8)))
-            lossValueSum += lossValueSumPixel
+            lossValuePixel = np.sqrt(lossValue*(2/(modelParams['activeBatchSize']*4)))
+            lossValueSum += lossValuePixel
 
             if step % FLAGS.printOutStep == 0:
                 numExamplesPerStep = modelParams['activeBatchSize']
@@ -167,9 +165,9 @@ def train():
                 secPerBatch = float(duration)
 
                 format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
-                              'sec/batch)')
+                              'sec/batch) pixelErr = %.2f')
                 logging.info(format_str % (datetime.now(), step, lossValue,
-                                           examplesPerSec, secPerBatch))
+                                           examplesPerSec, secPerBatch, lossValuePixel))
 
             if step % FLAGS.summaryWriteStep == 0:
                 summaryStr = sess.run(summaryOp)
@@ -179,17 +177,18 @@ def train():
             if step % FLAGS.modelCheckpointStep == 0 or (step + 1) == modelParams['trainMaxSteps']:
                 checkpointPath = os.path.join(modelParams['trainLogDir'], 'model.ckpt')
                 saver.save(sess, checkpointPath, global_step=step)
-
-            if step > 10000 and lossValueSumPixel < minPixelLoss:
-                print('saving min loss state')
-                minPixelLoss = lossValueSumPixel
-                checkpointPath = os.path.join(modelParams['trainLogDir'], 'model_minLoss.ckpt')
-                saver.save(sess, checkpointPath)
             
             # Print Progress Info
             if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == modelParams['trainMaxSteps']):
                 print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' %
                         ((100*step)/modelParams['trainMaxSteps'], lossValueSum/(step+1), durationSum/60, (((durationSum*modelParams['trainMaxSteps'])/(step+1))/60)-(durationSum/60)))
+                #diff = evtHAB[0,:] - evpHAB[0,:]
+                ## -1: all batches -> 2: rows, 4: cols
+                #diff = diff.reshape(2, 4)
+                #l2_pixel_loss = np.sqrt((diff*diff).sum(axis=0)).mean()
+                #print(l2_pixel_loss)
+                #print(np.around(evtHAB[0,:], decimals=1))
+                #print('[ %.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f]' % (evpHAB[0,0], evpHAB[0,1], evpHAB[0,2], evpHAB[0,3], evpHAB[0,4], evpHAB[0,5], evpHAB[0,6], evpHAB[0,7]))
 
 
         ######### USE LATEST STATE TO WARP IMAGES

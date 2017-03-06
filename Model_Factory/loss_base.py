@@ -3,7 +3,7 @@ from __future__ import division
 
 import tensorflow as tf
 
-def _add_loss_summaries(total_loss, batchSize):
+def add_loss_summaries(total_loss, batchSize):
     """Add summaries for losses in calusa_heatmap model.
     Generates moving average for all losses and associated summaries for
     visualizing the performance of the network.
@@ -13,13 +13,13 @@ def _add_loss_summaries(total_loss, batchSize):
       loss_averages_op: op for generating moving averages of losses.
     """
     # Compute the moving average of all individual losses and the total loss.
-    loss_averages = tf.train.ExponentialMovingAverage(0.9, name='avg')
+    loss_averages = tf.train.ExponentialMovingAverage(0.9, name='Average')
     losses = tf.get_collection('losses')
     loss_averages_op = loss_averages.apply(losses + [total_loss])
 
     # Individual average loss
-    lossPixelIndividual = tf.sqrt(tf.multiply(total_loss, 2/(batchSize*8)))
-    tf.summary.scalar('Average_Pixel_Error', lossPixelIndividual)
+    lossPixelIndividual = tf.sqrt(tf.multiply(total_loss, 2/(batchSize*4)))
+    tf.summary.scalar('Average_Pixel_Error_Real', lossPixelIndividual)
 
     # Attach a scalar summary to all individual losses and the total loss; do the
     # same for the averaged version of the losses.
@@ -71,10 +71,17 @@ def _l2_loss(pred, tval): # batchSize=Sne
     # decay terms (L2 loss).
     return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
+def _l2_pixel_loss(pred, tval): # batchSize=Sne
+    diff = tf.subtract(tval, pred)
+    # -1: all batches -> 2: rows, 4: cols
+    diff = tf.reshape(diff, [-1, 2, 4])
+    l2_pixel_loss = tf.reduce_sum(tf.multiply(diff,diff))/2
+    tf.add_to_collection('losses', l2_pixel_loss)
+    return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
 def loss(pred, tval, lossFunction):
     """
     Choose the proper loss function and call it.
     """
     if lossFunction == 'L2':
-        return _l2_loss(pred, tval)
+        return _l2_pixel_loss(pred, tval)

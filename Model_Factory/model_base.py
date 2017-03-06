@@ -517,8 +517,8 @@ def fc_regression_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **
         
         return fc, fireDims['fc']
 
-def loss(pred, tval, lossType):
-    return loss_base.loss(pred, tval, lossType)
+def loss(pred, tval, **kwargs):
+    return loss_base.loss(pred, tval, kwargs.get('lossFunction'))
 
 def train(loss, globalStep, **kwargs):
     if kwargs.get('optimizer') == 'MomentumOptimizer':
@@ -529,7 +529,7 @@ def train(loss, globalStep, **kwargs):
         optimizerParams = optimizer_params.get_gradient_descent_optimizer_params(globalStep, **kwargs)
 
     # Generate moving averages of all losses and associated summaries.
-    lossAveragesOp = loss_base._add_loss_summaries(loss, kwargs.get('activeBatchSize', None))
+    lossAveragesOp = loss_base.add_loss_summaries(loss, kwargs.get('activeBatchSize', None))
     
     # Compute gradients.
     tvars = tf.trainable_variables()
@@ -565,7 +565,7 @@ def train(loss, globalStep, **kwargs):
 
 def test(loss, globalStep, **kwargs):
     # Generate moving averages of all losses and associated summaries.
-    lossAveragesOp = loss_base._add_loss_summaries(loss, kwargs.get('activeBatchSize', None))
+    lossAveragesOp = loss_base.add_loss_summaries(loss, kwargs.get('activeBatchSize', None))
     
     with tf.control_dependencies([]):
         opTest = tf.no_op(name='test')
