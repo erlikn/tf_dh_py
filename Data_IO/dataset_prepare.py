@@ -197,15 +197,15 @@ def divide_train_test(readFolder, trainFolder, testFolder):
 dataRead = "../../Data/MSCOCO_orig/"
 dataReadGray = "../../Data/MSCOCO_gray/"
 
-train320 = "../../Data/320_240_train/"
+train320 = "../../Data/320_240_train_32/"
 traintfRecordFLD = "../../Data/128_train_tfrecords/"
 
 
-test640 = "../../Data/640_480_test/"
+test640 = "../../Data/640_480_test_64/"
 testtfRecordFLD = "../../Data/128_test_tfrecords/"
 
 """ Divide dataset (87XXXX) to (5000) test and (82XXX) training samples"""
-#divide_train_test(dataReadGray, train320, test640)
+divide_train_test(dataRead, train320, test640)
 
 """
     Generate more Test Samples
