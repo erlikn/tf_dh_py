@@ -533,8 +533,8 @@ def write_iterative():
     # so any model can be used by ease
 
     ##############
-    data['modelName'] = 'twin_cnn_4p4l2f'
     if reCompileJSON:
+        data['modelName'] = 'twin_cnn_4p4l2f'
         ### ITERATION 1
         runName = '170208_ITR_W_1'
         data['trainDataDir'] = '../Data/128_train_tfrecords'
@@ -619,7 +619,7 @@ def write_iterative():
 
     ##############
     if reCompileJSON:
-        data['modelName'] = 'twin_cnn_2p2l2f'
+        data['modelName'] = 'twin_cnn_4p4l2f'
         ### ITERATION 1
         runName = '170301_ITR_W_1'
         data['trainDataDir'] = '../Data/128_train_tfrecords'
@@ -631,14 +631,14 @@ def write_iterative():
         _set_folders(data['warpedTrainDataDir'])
         _set_folders(data['warpedTestDataDir'])
         data['warpOriginalImage'] = True
-        data['trainMaxSteps'] = 60000
-        data['numEpochsPerDecay'] = 25000.0
-        data['trainBatchSize'] = 20
-        data['testBatchSize'] = 20
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 64
+        data['testBatchSize'] = 64
         data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-        data['modelShape'] = [64, 64, 128, 128, 1024]
-        data['batchNorm'] = False
-        data['weightNorm'] = True
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['batchNorm'] = True
+        data['weightNorm'] = False
         write_json_file(runName+'.json', data)
         ### ITERATION 2
         runName = '170301_ITR_W_2'
@@ -651,14 +651,14 @@ def write_iterative():
         _set_folders(data['warpedTrainDataDir'])
         _set_folders(data['warpedTestDataDir'])
         data['warpOriginalImage'] = True
-        data['trainMaxSteps'] = 60000
-        data['numEpochsPerDecay'] = 25000.0
-        data['trainBatchSize'] = 20
-        data['testBatchSize'] = 20
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 64
+        data['testBatchSize'] = 64
         data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-        data['modelShape'] = [64, 64, 128, 128, 1024]
-        data['batchNorm'] = False
-        data['weightNorm'] = True
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['batchNorm'] = True
+        data['weightNorm'] = False
         write_json_file(runName+'.json', data)
         ### ITERATION 3
         runName = '170301_ITR_W_3'
@@ -671,14 +671,14 @@ def write_iterative():
         _set_folders(data['warpedTrainDataDir'])
         _set_folders(data['warpedTestDataDir'])
         data['warpOriginalImage'] = True
-        data['trainMaxSteps'] = 60000
-        data['numEpochsPerDecay'] = 25000.0
-        data['trainBatchSize'] = 20
-        data['testBatchSize'] = 20
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 64
+        data['testBatchSize'] = 64
         data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-        data['modelShape'] = [64, 64, 128, 128, 1024]
-        data['batchNorm'] = False
-        data['weightNorm'] = True
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['batchNorm'] = True
+        data['weightNorm'] = False
         write_json_file(runName+'.json', data)
         ### ITERATION 4
         runName = '170301_ITR_W_4'
@@ -691,14 +691,14 @@ def write_iterative():
         _set_folders(data['warpedTrainDataDir'])
         _set_folders(data['warpedTestDataDir'])
         data['warpOriginalImage'] = True
-        data['trainMaxSteps'] = 60000
-        data['numEpochsPerDecay'] = 25000.0
-        data['trainBatchSize'] = 20
-        data['testBatchSize'] = 20
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 64
+        data['testBatchSize'] = 64
         data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-        data['modelShape'] = [64, 64, 128, 128, 1024]
-        data['batchNorm'] = False
-        data['weightNorm'] = True
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['batchNorm'] = True
+        data['weightNorm'] = False
         write_json_file(runName+'.json', data)
 ####################################################################################
 ####################################################################################
