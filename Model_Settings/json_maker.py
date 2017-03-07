@@ -536,7 +536,7 @@ def write_iterative():
     if reCompileJSON:
         data['modelName'] = 'twin_cnn_4p4l2f'
         ### ITERATION 1
-        runName = '170208_ITR_W_1'
+        runName = '170208_ITR_B_1'
         data['trainDataDir'] = '../Data/128_train_tfrecords'
         data['testDataDir'] = '../Data/128_test_tfrecords'
         data['trainLogDir'] = trainLogDirBase + runName
@@ -556,7 +556,7 @@ def write_iterative():
         data['weightNorm'] = False
         write_json_file(runName+'.json', data)
         ### ITERATION 2
-        runName = '170208_ITR_W_2'
+        runName = '170208_ITR_B_2'
         data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
         data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
         data['trainLogDir'] = trainLogDirBase + runName
@@ -576,7 +576,7 @@ def write_iterative():
         data['weightNorm'] = False
         write_json_file(runName+'.json', data)
         ### ITERATION 3
-        runName = '170208_ITR_W_3'
+        runName = '170208_ITR_B_3'
         data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
         data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
         data['trainLogDir'] = trainLogDirBase + runName
@@ -596,7 +596,7 @@ def write_iterative():
         data['weightNorm'] = False
         write_json_file(runName+'.json', data)
         ### ITERATION 4
-        runName = '170208_ITR_W_4'
+        runName = '170208_ITR_B_4'
         data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
         data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
         data['trainLogDir'] = trainLogDirBase + runName
@@ -621,7 +621,7 @@ def write_iterative():
     if reCompileJSON:
         data['modelName'] = 'twin_cnn_4p4l2f'
         ### ITERATION 1
-        runName = '170301_ITR_W_1'
+        runName = '170301_ITR_B_1'
         data['trainDataDir'] = '../Data/128_train_tfrecords'
         data['testDataDir'] = '../Data/128_test_tfrecords'
         data['trainLogDir'] = trainLogDirBase + runName
@@ -641,7 +641,7 @@ def write_iterative():
         data['weightNorm'] = False
         write_json_file(runName+'.json', data)
         ### ITERATION 2
-        runName = '170301_ITR_W_2'
+        runName = '170301_ITR_B_2'
         data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
         data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
         data['trainLogDir'] = trainLogDirBase + runName
@@ -661,7 +661,7 @@ def write_iterative():
         data['weightNorm'] = False
         write_json_file(runName+'.json', data)
         ### ITERATION 3
-        runName = '170301_ITR_W_3'
+        runName = '170301_ITR_B_3'
         data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
         data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
         data['trainLogDir'] = trainLogDirBase + runName
@@ -681,7 +681,7 @@ def write_iterative():
         data['weightNorm'] = False
         write_json_file(runName+'.json', data)
         ### ITERATION 4
-        runName = '170301_ITR_W_4'
+        runName = '170301_ITR_B_4'
         data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
         data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
         data['trainLogDir'] = trainLogDirBase + runName
