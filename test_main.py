@@ -31,7 +31,7 @@ PHASE = 'test'
 # import json_maker, update json files and read requested json file
 import Model_Settings.json_maker as json_maker
 json_maker.recompile_json_files()
-jsonToRead = '170126_SIN_W.json'
+jsonToRead = '170127_TWN_MOM_B.json'
 print("Reading %s" % jsonToRead)
 with open('Model_Settings/'+jsonToRead) as data_file:
     modelParams = json.load(data_file)

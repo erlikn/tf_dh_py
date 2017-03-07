@@ -258,8 +258,8 @@ def write_twin():
         data['testLogDir'] = testLogDirBase+'170127_TWN_MOM_B'
         data['trainMaxSteps'] = 120000
         data['numEpochsPerDecay'] = 40000.0
-        data['trainBatchSize'] = 20
-        data['testBatchSize'] = 20
+        data['trainBatchSize'] = 64
+        data['testBatchSize'] = 64
         data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
         data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
         data['batchNorm'] = True
@@ -377,8 +377,8 @@ def write_twin():
         data['testLogDir'] = testLogDirBase+'170129_TWN_MOM_B_64'
         data['trainMaxSteps'] = 90000
         data['numEpochsPerDecay'] = 30000.0
-        data['trainBatchSize'] = 20
-        data['testBatchSize'] = 20
+        data['trainBatchSize'] = 64
+        data['testBatchSize'] = 64
         data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
         data['modelShape'] = [64, 64, 64, 64, 64, 64, 64, 64, 1024]
         data['batchNorm'] = True
@@ -440,8 +440,8 @@ def write_single():
         data['testLogDir'] = testLogDirBase+'170126_SIN_B'
         data['trainMaxSteps'] = 90000
         data['numEpochsPerDecay'] = 30000.0
-        data['trainBatchSize'] = 20
-        data['testBatchSize'] = 20
+        data['trainBatchSize'] = 64
+        data['testBatchSize'] = 64
         data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
         data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
         data['batchNorm'] = True

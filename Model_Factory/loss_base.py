@@ -18,7 +18,7 @@ def add_loss_summaries(total_loss, batchSize):
     loss_averages_op = loss_averages.apply(losses + [total_loss])
 
     # Individual average loss
-    lossPixelIndividual = tf.sqrt(tf.multiply(total_loss, 2/(batchSize*4)))
+    lossPixelIndividual = tf.sqrt(tf.multiply(total_loss, 2/(batchSize*4))) # dvidied by (8/2) = 4 which is equal to sum of 2 of them then sqrt will result in euclidean pixel error
     tf.summary.scalar('Average_Pixel_Error_Real', lossPixelIndividual)
 
     # Attach a scalar summary to all individual losses and the total loss; do the
@@ -71,17 +71,9 @@ def _l2_loss(pred, tval): # batchSize=Sne
     # decay terms (L2 loss).
     return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
-def _l2_pixel_loss(pred, tval): # batchSize=Sne
-    diff = tf.subtract(tval, pred)
-    # -1: all batches -> 2: rows, 4: cols
-    diff = tf.reshape(diff, [-1, 2, 4])
-    l2_pixel_loss = tf.reduce_sum(tf.multiply(diff,diff))/2
-    tf.add_to_collection('losses', l2_pixel_loss)
-    return tf.add_n(tf.get_collection('losses'), name='total_loss')
-
 def loss(pred, tval, lossFunction):
     """
     Choose the proper loss function and call it.
     """
     if lossFunction == 'L2':
-        return _l2_pixel_loss(pred, tval)
+        return _l2_loss(pred, tval)
