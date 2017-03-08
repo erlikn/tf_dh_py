@@ -527,7 +527,7 @@ def write_iterative():
     trainLogDirBase = '../Data/128_logs/tfdh_iterative_logs/train_logs/'
     testLogDirBase = '../Data/128_logs/tfdh_iterative_logs/test_logs/'
 
-    writeWarpedImages = True
+    data['writeWarpedImages'] = True
 
     # Iterative model only changes the wayoutput is written, 
     # so any model can be used by ease
