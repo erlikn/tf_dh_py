@@ -240,6 +240,8 @@ def write_twin():
 
     data['modelName'] = 'twin_cnn_4p4l2f'
     
+    data['optimizer'] = 'MomentumOptimizer'
+
     writeWarpedImages = False
 
     if reCompileJSON:
@@ -433,6 +435,7 @@ def write_single():
     testDataDir = '../Data/128_test_tfrecords'
 
     data['modelName'] = 'cnn_8l2f'
+    data['optimizer'] = 'MomentumOptimizer'
 
     writeWarpedImages = False
 
@@ -496,6 +499,7 @@ def write_twin_correlation():
     testDataDir = '../Data/128_test_tfrecords'
 
     data['modelName'] = 'twin_cnn_4pCorr4l2f'
+    data['optimizer'] = 'MomentumOptimizer'
 
     writeWarpedImages = False
 
@@ -531,9 +535,10 @@ def write_iterative():
 
     # Iterative model only changes the wayoutput is written, 
     # so any model can be used by ease
-
-    ##############
+    ############## GPU1
     if reCompileJSON:
+        data['optimizer'] = 'MomentumOptimizer'
+
         data['modelName'] = 'twin_cnn_4p4l2f'
         ### ITERATION 1
         runName = '170208_ITR_B_1'
@@ -616,9 +621,9 @@ def write_iterative():
         data['weightNorm'] = False
         write_json_file(runName+'.json', data)
 
-
-    ##############
+    ############## GPU2
     if reCompileJSON:
+        data['optimizer'] = 'MomentumOptimizer'
         data['modelName'] = 'twin_cnn_4p4l2f'
         ### ITERATION 1
         runName = '170301_ITR_B_1'
@@ -636,7 +641,7 @@ def write_iterative():
         data['trainBatchSize'] = 64
         data['testBatchSize'] = 64
         data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['modelShape'] = [32, 32, 32, 32, 64, 64, 64, 64, 1024]
         data['batchNorm'] = True
         data['weightNorm'] = False
         write_json_file(runName+'.json', data)
@@ -656,7 +661,7 @@ def write_iterative():
         data['trainBatchSize'] = 64
         data['testBatchSize'] = 64
         data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['modelShape'] = [32, 32, 32, 32, 64, 64, 64, 64, 1024]
         data['batchNorm'] = True
         data['weightNorm'] = False
         write_json_file(runName+'.json', data)
@@ -676,7 +681,7 @@ def write_iterative():
         data['trainBatchSize'] = 64
         data['testBatchSize'] = 64
         data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
-        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['modelShape'] = [32, 32, 32, 32, 64, 64, 64, 64, 1024]
         data['batchNorm'] = True
         data['weightNorm'] = False
         write_json_file(runName+'.json', data)
@@ -696,9 +701,183 @@ def write_iterative():
         data['trainBatchSize'] = 64
         data['testBatchSize'] = 64
         data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [32, 32, 32, 32, 64, 64, 64, 64, 1024]
+        data['batchNorm'] = True
+        data['weightNorm'] = False
+        write_json_file(runName+'.json', data)
+
+
+
+    ############## GPU3
+    if reCompileJSON:
+        data['optimizer'] = 'MomentumOptimizer'
+
+        data['modelName'] = 'twin_cnn_4p4l2f'
+        ### ITERATION 1
+        runName = '170208_ITR_B_48_64_1'
+        data['trainDataDir'] = '../Data/128_train_tfrecords'
+        data['testDataDir'] = '../Data/128_test_tfrecords'
+        data['trainLogDir'] = trainLogDirBase + runName
+        data['testLogDir'] = testLogDirBase + runName
+        data['warpedTrainDataDir'] = warpedImageTrainBase + runName
+        data['warpedTestDataDir'] = warpedImageTestBase+ runName
+        _set_folders(data['warpedTrainDataDir'])
+        _set_folders(data['warpedTestDataDir'])
+        data['warpOriginalImage'] = True
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 64
+        data['testBatchSize'] = 64
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
         data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
         data['batchNorm'] = True
         data['weightNorm'] = False
+        write_json_file(runName+'.json', data)
+        ### ITERATION 2
+        runName = '170208_ITR_B_48_64_2'
+        data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
+        data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
+        data['trainLogDir'] = trainLogDirBase + runName
+        data['testLogDir'] = testLogDirBase + runName
+        data['warpedTrainDataDir'] = warpedImageTrainBase + runName
+        data['warpedTestDataDir'] = warpedImageTestBase+ runName
+        _set_folders(data['warpedTrainDataDir'])
+        _set_folders(data['warpedTestDataDir'])
+        data['warpOriginalImage'] = True
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 64
+        data['testBatchSize'] = 64
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['batchNorm'] = True
+        data['weightNorm'] = False
+        write_json_file(runName+'.json', data)
+        ### ITERATION 3
+        runName = '170208_ITR_B_48_64_3'
+        data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
+        data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
+        data['trainLogDir'] = trainLogDirBase + runName
+        data['testLogDir'] = testLogDirBase + runName
+        data['warpedTrainDataDir'] = warpedImageTrainBase + runName
+        data['warpedTestDataDir'] = warpedImageTestBase+ runName
+        _set_folders(data['warpedTrainDataDir'])
+        _set_folders(data['warpedTestDataDir'])
+        data['warpOriginalImage'] = True
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 64
+        data['testBatchSize'] = 64
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['batchNorm'] = True
+        data['weightNorm'] = False
+        write_json_file(runName+'.json', data)
+        ### ITERATION 4
+        runName = '170208_ITR_B_48_64_4'
+        data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
+        data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
+        data['trainLogDir'] = trainLogDirBase + runName
+        data['testLogDir'] = testLogDirBase + runName
+        data['warpedTrainDataDir'] = warpedImageTrainBase + runName
+        data['warpedTestDataDir'] = warpedImageTestBase+ runName
+        _set_folders(data['warpedTrainDataDir'])
+        _set_folders(data['warpedTestDataDir'])
+        data['warpOriginalImage'] = True
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 64
+        data['testBatchSize'] = 64
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['batchNorm'] = True
+        data['weightNorm'] = False
+        write_json_file(runName+'.json', data)
+
+    ############## GPU4
+    if reCompileJSON:
+        data['optimizer'] = 'MomentumOptimizer'
+
+        data['modelName'] = 'twin_cnn_4p4l2f'
+        ### ITERATION 1
+        runName = '170208_ITR_W_1'
+        data['trainDataDir'] = '../Data/128_train_tfrecords'
+        data['testDataDir'] = '../Data/128_test_tfrecords'
+        data['trainLogDir'] = trainLogDirBase + runName
+        data['testLogDir'] = testLogDirBase + runName
+        data['warpedTrainDataDir'] = warpedImageTrainBase + runName
+        data['warpedTestDataDir'] = warpedImageTestBase+ runName
+        _set_folders(data['warpedTrainDataDir'])
+        _set_folders(data['warpedTestDataDir'])
+        data['warpOriginalImage'] = True
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 64
+        data['testBatchSize'] = 64
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['batchNorm'] = False
+        data['weightNorm'] = True
+        write_json_file(runName+'.json', data)
+        ### ITERATION 2
+        runName = '170208_ITR_W_2'
+        data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
+        data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
+        data['trainLogDir'] = trainLogDirBase + runName
+        data['testLogDir'] = testLogDirBase + runName
+        data['warpedTrainDataDir'] = warpedImageTrainBase + runName
+        data['warpedTestDataDir'] = warpedImageTestBase+ runName
+        _set_folders(data['warpedTrainDataDir'])
+        _set_folders(data['warpedTestDataDir'])
+        data['warpOriginalImage'] = True
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 64
+        data['testBatchSize'] = 64
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['batchNorm'] = False
+        data['weightNorm'] = True
+        write_json_file(runName+'.json', data)
+        ### ITERATION 3
+        runName = '170208_ITR_W_3'
+        data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
+        data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
+        data['trainLogDir'] = trainLogDirBase + runName
+        data['testLogDir'] = testLogDirBase + runName
+        data['warpedTrainDataDir'] = warpedImageTrainBase + runName
+        data['warpedTestDataDir'] = warpedImageTestBase+ runName
+        _set_folders(data['warpedTrainDataDir'])
+        _set_folders(data['warpedTestDataDir'])
+        data['warpOriginalImage'] = True
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 64
+        data['testBatchSize'] = 64
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['batchNorm'] = False
+        data['weightNorm'] = True
+        write_json_file(runName+'.json', data)
+        ### ITERATION 4
+        runName = '170208_ITR_W_4'
+        data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
+        data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
+        data['trainLogDir'] = trainLogDirBase + runName
+        data['testLogDir'] = testLogDirBase + runName
+        data['warpedTrainDataDir'] = warpedImageTrainBase + runName
+        data['warpedTestDataDir'] = warpedImageTestBase+ runName
+        _set_folders(data['warpedTrainDataDir'])
+        _set_folders(data['warpedTestDataDir'])
+        data['warpOriginalImage'] = True
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 64
+        data['testBatchSize'] = 64
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        data['batchNorm'] = False
+        data['weightNorm'] = True
         write_json_file(runName+'.json', data)
 ####################################################################################
 ####################################################################################
@@ -715,7 +894,7 @@ def write_residual():
     testLogDirBase = '../Data/128_logs/tfdh_residual_logs/test_logs/'
 
     data['modelName'] = 'twin_cnn_res_4p4l2f'
-
+    data['optimizer'] = 'MomentumOptimizer'
     writeWarpedImages = False
     
     ##############
