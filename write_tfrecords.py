@@ -94,7 +94,7 @@ def train():
     #    # also load the target output sizes
     #    params['targSz'] = meanInfo["targSz"]
 
-    _setupLogging(os.path.join(modelParams['trainLogDir'], "genlog"))
+    #_setupLogging(os.path.join(modelParams['trainLogDir'], "genlog"))
 
     with tf.Graph().as_default():
         # BGR to RGB
@@ -116,16 +116,8 @@ def train():
         # Calculate loss.
         loss = model_cnn.loss(pHAB, tHAB, **modelParams)
 
-        # Build a Graph that trains the model with one batch of examples and
-        # updates the model parameters.
-        opTrain = model_cnn.train(loss, globalStep, **modelParams)
-        ##############################
-
         # Create a saver.
         saver = tf.train.Saver(tf.global_variables())
-
-        # Build the summary operation based on the TF collection of Summaries.
-        summaryOp = tf.summary.merge_all()
 
         # Build an initialization operation to run below.
         #init = tf.initialize_all_variables()
@@ -141,56 +133,16 @@ def train():
         #sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
         sess.run(init)
 
+        # restore a saver.
+        saver = tf.train.Saver(tf.global_variables())
+        saver.restore(sess, modelParams['trainLogDir']+'/model.ckpt-89999')
+
         # Start the queue runners.
         tf.train.start_queue_runners(sess=sess)
-
-        summaryWriter = tf.summary.FileWriter(modelParams['trainLogDir'], sess.graph)
         
         lossValueSum = 0
         durationSum = 0
-        for step in xrange(modelParams['maxSteps']):
-            startTime = time.time()
-            _, lossValue = sess.run([opTrain, loss])
-            duration = time.time() - startTime
-            durationSum += duration 
-            assert not np.isnan(lossValue), 'Model diverged with loss = NaN'
-
-            # Calculate pixel error for current batch
-            lossValuePixel = np.sqrt(lossValue*(2/(modelParams['activeBatchSize']*4)))
-            lossValueSum += lossValuePixel
-
-            if step % FLAGS.printOutStep == 0:
-                numExamplesPerStep = modelParams['activeBatchSize']
-                examplesPerSec = numExamplesPerStep / duration
-                secPerBatch = float(duration)
-
-                format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
-                              'sec/batch) pixelErr = %.2f')
-                logging.info(format_str % (datetime.now(), step, lossValue,
-                                           examplesPerSec, secPerBatch, lossValuePixel))
-
-            if step % FLAGS.summaryWriteStep == 0:
-                summaryStr = sess.run(summaryOp)
-                summaryWriter.add_summary(summaryStr, step)
-
-            # Save the model checkpoint periodically.
-            if step % FLAGS.modelCheckpointStep == 0 or (step + 1) == modelParams['trainMaxSteps']:
-                checkpointPath = os.path.join(modelParams['trainLogDir'], 'model.ckpt')
-                saver.save(sess, checkpointPath, global_step=step)
-            
-            # Print Progress Info
-            if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == modelParams['trainMaxSteps']):
-                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' %
-                        ((100*step)/modelParams['trainMaxSteps'], lossValueSum/(step+1), durationSum/60, (((durationSum*modelParams['trainMaxSteps'])/(step+1))/60)-(durationSum/60)))
-                #diff = evtHAB[0,:] - evpHAB[0,:]
-                ## -1: all batches -> 2: rows, 4: cols
-                #diff = diff.reshape(2, 4)
-                #l2_pixel_loss = np.sqrt((diff*diff).sum(axis=0)).mean()
-                #print(l2_pixel_loss)
-                #print(np.around(evtHAB[0,:], decimals=1))
-                #print('[ %.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f]' % (evpHAB[0,0], evpHAB[0,1], evpHAB[0,2], evpHAB[0,3], evpHAB[0,4], evpHAB[0,5], evpHAB[0,6], evpHAB[0,7]))
-
-
+        
         ######### USE LATEST STATE TO WARP IMAGES
         if modelParams['writeWarpedImages']:
             lossValueSum = 0
@@ -210,42 +162,18 @@ def train():
             print('Average training loss = %.2f - Average time per sample= %.2f s, Steps = %d' % (lossValueSum/step, durationSum/(step*modelParams['activeBatchSize']), step))
 
 
-def _setupLogging(logPath):
-    # cleanup
-    if os.path.isfile(logPath):
-        os.remove(logPath)
-
-    logging.basicConfig(level=logging.DEBUG,
-                        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                        datefmt='%m-%d %H:%M',
-                        filename=logPath,
-                        filemode='w')
-
-    # also write out to the console
-    console = logging.StreamHandler()
-    console.setLevel(logging.DEBUG)
-    console.setFormatter(logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s'))
-
-    # add the handler to the root logger
-    logging.getLogger().addHandler(console)
-
-    logging.info("Logging setup complete to %s" % logPath)
-
 def main(argv=None):  # pylint: disable=unused-argumDt
     print(modelParams['modelName'])
     print('Rounds on datase = %.1f' % float((modelParams['trainBatchSize']*modelParams['trainMaxSteps'])/modelParams['numTrainDatasetExamples']))
     print('Train Input: %s' % modelParams['trainDataDir'])
     #print('Test  Input: %s' % modelParams['testDataDir'])
-    print('Train Logs Output: %s' % modelParams['trainLogDir'])
+    #print('Train Logs Output: %s' % modelParams['trainLogDir'])
     #print('Test  Logs Output: %s' % modelParams['testLogDir'])
     print('Train Warp Output: %s' % modelParams['warpedTrainDataDir'])
     #print('Test  Warp Output: %s' % modelParams['warpedTestDataDir'])
     if input("(Overwrite WARNING) Did you change logs directory? ") != "yes":
         print("Please consider changing logs directory in order to avoid overwrite!")
         return
-    if tf.gfile.Exists(modelParams['trainLogDir']):
-        tf.gfile.DeleteRecursively(modelParams['trainLogDir'])
-    tf.gfile.MakeDirs(modelParams['trainLogDir'])
     train()
 
 
