@@ -160,7 +160,7 @@ def loss(pHAB, tHAB, **kwargs): # batchSize=Sne
     Returns:
       Loss tensor of type float.
     """
-    return model_base.loss(pHAB, tHAB, kwargs.get('lossFunction'))
+    return model_base.loss(pHAB, tHAB, **kwargs)
 
 def train(loss, globalStep, **kwargs):
     return model_base.train(loss, globalStep, **kwargs)

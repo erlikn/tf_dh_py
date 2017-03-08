@@ -150,7 +150,7 @@ def inference(images, **kwargs): #batchSize=None, phase='train', outLayer=[13,13
     return fireOut
 
 def loss(pHAB, tHAB, **kwargs): # batchSize=Sne
-    return model_base.loss(pHAB, tHAB, kwargs.get('lossFunction'))
+    return model_base.loss(pHAB, tHAB, **kwargs)
 
 def train(loss, globalStep, **kwargs):
     return model_base.train(loss, globalStep, **kwargs)

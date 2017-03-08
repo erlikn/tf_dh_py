@@ -218,4 +218,4 @@ prepare_dataset("test", test640, testtfRecordFLD)
     generate  Samples
     Total Files =  orig +  pert + 25,000 HAB = 
 """
-#prepare_dataset("train", train320, traintfRecordFLD)
+prepare_dataset("train", train320, traintfRecordFLD)
