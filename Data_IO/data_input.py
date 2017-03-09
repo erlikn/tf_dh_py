@@ -48,11 +48,11 @@ tf.app.flags.DEFINE_integer('testShardSize', TEST_SHARD_SIZE,
 #tf.app.flags.DEFINE_integer('val_shard_size', 8*25,    # 200 records/shard
 #                            'Number of shards in validation TFRecord files.')
 
-tf.app.flags.DEFINE_integer('numPreprocessThreads', 4,
+tf.app.flags.DEFINE_integer('numPreprocessThreads', 8,
                             """Number of preprocessing threads per tower. """
                             """Please make this a multiple of 4.""")
 
-tf.app.flags.DEFINE_integer('numReaders', 4,
+tf.app.flags.DEFINE_integer('numReaders', 8,
                             """Number of parallel readers during train.""")
 
 # Images are preprocessed asynchronously using multiple threads specified by

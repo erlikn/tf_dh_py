@@ -872,7 +872,7 @@ def write_iterative():
         write_json_file(runName+'.json', data)
 
 
-        ##############
+    ##############
     if reCompileJSON:
         data['modelName'] = 'twin_cnn_4p4l2f'
         data['optimizer'] = 'AdamOptimizer' # AdamOptimizer MomentumOptimizer GradientDescentOptimizer
@@ -897,7 +897,7 @@ def write_iterative():
         data['weightNorm'] = False
         write_json_file(runName+'.json', data)
         ### ITERATION 2
-        runName = '170301_ITR_B_ADAM_512_1'
+        runName = '170301_ITR_B_ADAM_512_2'
         data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
         data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
         data['trainLogDir'] = trainLogDirBase + runName

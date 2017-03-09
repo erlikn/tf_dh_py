@@ -405,13 +405,13 @@ def conv_fire_residual_module(name, prevLayerOut, prevLayerDim, historicLayerOut
             # zero pad current historicLayerOut to the size of prevLayerDim
             historicLayerOut = historicLayerOut
     
-    if (fireDimsSingleModule.get('cnn3x3')):
+    if (fireDims.get('cnn3x3')):
         cnnName = 'cnn3x3'
         kernelSize = 3
-    if (fireDimsSingleModule.get('cnn5x5')):
+    if (fireDims.get('cnn5x5')):
         cnnName = 'cnn5x5'
         kernelSize = 5
-    if (fireDimsSingleModule.get('cnn7x7')):
+    if (fireDims.get('cnn7x7')):
         cnnName = 'cnn7x7'
         kernelSize = 7
 
@@ -457,13 +457,13 @@ def conv_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwar
     
     existingParams = kwargs.get('existingParams')
     
-    if (fireDimsSingleModule.get('cnn3x3')):
+    if (fireDims.get('cnn3x3')):
         cnnName = 'cnn3x3'
         kernelSize = 3
-    if (fireDimsSingleModule.get('cnn5x5')):
+    if (fireDims.get('cnn5x5')):
         cnnName = 'cnn5x5'
         kernelSize = 5
-    if (fireDimsSingleModule.get('cnn7x7')):
+    if (fireDims.get('cnn7x7')):
         cnnName = 'cnn7x7'
         kernelSize = 7
 
