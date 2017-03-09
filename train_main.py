@@ -31,7 +31,7 @@ PHASE = 'train'
 # import json_maker, update json files and read requested json file
 import Model_Settings.json_maker as json_maker
 json_maker.recompile_json_files()
-jsonToRead = '170301_ITR_B_ADAM_512_1.json'
+jsonToRead = '170301_ITR_B_Res_1.json'
 print("Reading %s" % jsonToRead)
 with open('Model_Settings/'+jsonToRead) as data_file:
     modelParams = json.load(data_file)
