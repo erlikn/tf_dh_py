@@ -31,7 +31,7 @@ PHASE = 'train'
 # import json_maker, update json files and read requested json file
 import Model_Settings.json_maker as json_maker
 json_maker.recompile_json_files()
-jsonToRead = '170127_TWN_MOM_B.json'
+jsonToRead = '170301_ITR_B_ADAM_512_1.json'
 print("Reading %s" % jsonToRead)
 with open('Model_Settings/'+jsonToRead) as data_file:
     modelParams = json.load(data_file)
@@ -199,7 +199,7 @@ def train():
             for step in xrange(stepsForOneDataRound):
                 startTime = time.time()
                 evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, evlossValue = sess.run([imagesOrig, images, pOrig, tHAB, pHAB, tfrecFileIDs, loss])
-                lossValueSum += np.sqrt(evlossValue*(2/(modelParams['activeBatchSize']*8)))
+                lossValueSum += np.sqrt(2*evlossValue*(2/(modelParams['activeBatchSize']*8)))
                 durationSum += (time.time() - startTime)
                 #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
                 data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)

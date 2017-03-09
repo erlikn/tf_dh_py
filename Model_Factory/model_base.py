@@ -187,6 +187,26 @@ def twin_correlation(name, prevLayerOut, prevLayerDim, d, s2, **kwargs):
     #return resultTensor
     return resultBatch, D*D
 
+def twin_correlation_simple(name, prevLayerOut, prevLayerDim, **kwargs):
+    dtype = tf.float16 if kwargs.get('usefp16') else tf.float32
+
+    numParallelModules = kwargs.get('numParallelModules') # 2
+    # Input from Twin network -> numParallelModules = 2
+    # Split tensor through last dimension into numParallelModules tensors
+    prevLayerOut = tf.split(prevLayerOut, num_or_size_splits=numParallelModules, axis=3)
+    prevLayerIndivDims = prevLayerDim / numParallelModules
+
+    # f1 is a list of size batchSize,x,y of [1,1,c,1] tensors  => last 1 is for the output size
+    prevLayerOut[0] = tf.split(prevLayerOut[0], num_or_size_splits=kwargs.get('activeBatchSize'), axis=0) # batches seperate
+
+    #ins = tf.split(input, num_or_size_splits=32, axis=0)
+    # TO BE COMPLETED
+
+    resultBatch = tf.reshape(tf.nn.conv2d(prevLayerOut[0], prevLayerOut[1], [1, 4, 4, 1], padding='SAME'), [kwargs.get('activeBatchSize'), -1])
+
+    #return resultTensor
+    return resultBatch, 
+
 def conv_fire_parallel_residual_module(name, prevLayerOut, prevLayerDim, historicLayerOut, historicLayerDim, fireDimsSingleModule, wd=None, **kwargs):
     """
     Input Args:
@@ -210,8 +230,18 @@ def conv_fire_parallel_residual_module(name, prevLayerOut, prevLayerDim, histori
     historicLayerOut = tf.split(historicLayerOut, numParallelModules, axis=3)
     historicLayerIndivDim = historicLayerDim / numParallelModules
 
+    if (fireDimsSingleModule.get('cnn3x3')):
+        cnnName = 'cnn3x3'
+        kernelSize = 3
+    if (fireDimsSingleModule.get('cnn5x5')):
+        cnnName = 'cnn5x5'
+        kernelSize = 5
+    if (fireDimsSingleModule.get('cnn7x7')):
+        cnnName = 'cnn7x7'
+        kernelSize = 7
+
     # output depth of the convolution should be same as historic
-    if numParallelModules*fireDimsSingleModule['cnn3x3'] != historicLayerDim:
+    if numParallelModules*fireDimsSingleModule[cnnName] != historicLayerDim:
         # TO DO
         if kwargs.get('residualPadding') == "conv":
             for prl in range(numParallelModules):
@@ -224,10 +254,10 @@ def conv_fire_parallel_residual_module(name, prevLayerOut, prevLayerDim, histori
 
 
     with tf.variable_scope(name):
-        with tf.variable_scope('cnn3x3') as scope:
+        with tf.variable_scope(cnnName) as scope:
             layerName = scope.name.replace("/", "_")
             #kernel = _variable_with_weight_decay('weights',
-            #                                     shape=[3, 3, prevLayerIndivDims, fireDimsSingleModule['cnn3x3']],
+            #                                     shape=[kernelSize, kernelSize, prevLayerIndivDims, fireDimsSingleModule['cnn3x3']],
             #                                     initializer=existingParams[layerName]['weights'] if (existingParams is not None and
             #                                                                                         layerName in existingParams) else
             #                                                    (tf.contrib.layers.xavier_initializer_conv2d() if kwargs.get('phase')=='train' else
@@ -238,7 +268,7 @@ def conv_fire_parallel_residual_module(name, prevLayerOut, prevLayerDim, histori
             #                                                                               layerName in existingParams) else True)
             stddev = np.sqrt(2/np.prod(prevLayerOut[0].get_shape().as_list()[1:]))
             kernel = _variable_with_weight_decay('weights',
-                                                 shape=[3, 3, prevLayerIndivDims, fireDimsSingleModule['cnn3x3']],
+                                                 shape=[kernelSize, kernelSize, prevLayerIndivDims, fireDimsSingleModule[cnnName]],
                                                  initializer=existingParams[layerName]['weights'] if (existingParams is not None and
                                                                                                      layerName in existingParams) else
                                                                 (tf.random_normal_initializer(stddev=stddev) if kwargs.get('phase')=='train' else
@@ -253,7 +283,7 @@ def conv_fire_parallel_residual_module(name, prevLayerOut, prevLayerDim, histori
                                          initializer=existingParams[layerName]['biases'], 
                                          dtype=dtype)
             else:
-                biases = tf.get_variable('biases', [fireDimsSingleModule['cnn3x3']],
+                biases = tf.get_variable('biases', [fireDimsSingleModule[cnnName]],
                                          initializer=tf.constant_initializer(0.0),
                                          dtype=dtype)
 
@@ -274,7 +304,7 @@ def conv_fire_parallel_residual_module(name, prevLayerOut, prevLayerDim, histori
 
             _activation_summary(convRelu)
 
-    return convRelu, numParallelModules*fireDimsSingleModule['cnn3x3']
+    return convRelu, numParallelModules*fireDimsSingleModule[cnnName]
 
 def conv_fire_parallel_module(name, prevLayerOut, prevLayerDim, fireDimsSingleModule, wd=None, **kwargs):
     """
@@ -296,11 +326,21 @@ def conv_fire_parallel_module(name, prevLayerOut, prevLayerDim, fireDimsSingleMo
     prevLayerOut = tf.split(prevLayerOut, numParallelModules, axis=3)
     prevLayerIndivDims = prevLayerDim / numParallelModules
 
+    if (fireDimsSingleModule.get('cnn3x3')):
+        cnnName = 'cnn3x3'
+        kernelSize = 3
+    if (fireDimsSingleModule.get('cnn5x5')):
+        cnnName = 'cnn5x5'
+        kernelSize = 5
+    if (fireDimsSingleModule.get('cnn7x7')):
+        cnnName = 'cnn7x7'
+        kernelSize = 7
+
     with tf.variable_scope(name):
-        with tf.variable_scope('cnn3x3') as scope:
+        with tf.variable_scope(cnnName) as scope:
             layerName = scope.name.replace("/", "_")
             #kernel = _variable_with_weight_decay('weights',
-            #                                     shape=[3, 3, prevLayerIndivDims, fireDimsSingleModule['cnn3x3']],
+            #                                     shape=[kernelSize, kernelSize, prevLayerIndivDims, fireDimsSingleModule['cnn3x3']],
             #                                     initializer=existingParams[layerName]['weights'] if (existingParams is not None and
             #                                                                                         layerName in existingParams) else
             #                                                    (tf.contrib.layers.xavier_initializer_conv2d() if kwargs.get('phase')=='train' else
@@ -311,7 +351,7 @@ def conv_fire_parallel_module(name, prevLayerOut, prevLayerDim, fireDimsSingleMo
             #                                                                               layerName in existingParams) else True)
             stddev = np.sqrt(2/np.prod(prevLayerOut[0].get_shape().as_list()[1:]))
             kernel = _variable_with_weight_decay('weights',
-                                                 shape=[3, 3, prevLayerIndivDims, fireDimsSingleModule['cnn3x3']],
+                                                 shape=[kernelSize, kernelSize, prevLayerIndivDims, fireDimsSingleModule[cnnName]],
                                                  initializer=existingParams[layerName]['weights'] if (existingParams is not None and
                                                                                                      layerName in existingParams) else
                                                                 (tf.random_normal_initializer(stddev=stddev) if kwargs.get('phase')=='train' else
@@ -326,7 +366,7 @@ def conv_fire_parallel_module(name, prevLayerOut, prevLayerDim, fireDimsSingleMo
                                          initializer=existingParams[layerName]['biases'], 
                                          dtype=dtype)
             else:
-                biases = tf.get_variable('biases', [fireDimsSingleModule['cnn3x3']],
+                biases = tf.get_variable('biases', [fireDimsSingleModule[cnnName]],
                                          initializer=tf.constant_initializer(0.0),
                                          dtype=dtype)
 
@@ -347,7 +387,7 @@ def conv_fire_parallel_module(name, prevLayerOut, prevLayerDim, fireDimsSingleMo
 
             _activation_summary(convRelu)
 
-    return convRelu, numParallelModules*fireDimsSingleModule['cnn3x3']
+    return convRelu, numParallelModules*fireDimsSingleModule[cnnName]
 
 def conv_fire_residual_module(name, prevLayerOut, prevLayerDim, historicLayerOut, historicLayerDim, fireDims, wd=None, **kwargs):
     USE_FP_16 = kwargs.get('usefp16')
@@ -365,11 +405,21 @@ def conv_fire_residual_module(name, prevLayerOut, prevLayerDim, historicLayerOut
             # zero pad current historicLayerOut to the size of prevLayerDim
             historicLayerOut = historicLayerOut
     
+    if (fireDimsSingleModule.get('cnn3x3')):
+        cnnName = 'cnn3x3'
+        kernelSize = 3
+    if (fireDimsSingleModule.get('cnn5x5')):
+        cnnName = 'cnn5x5'
+        kernelSize = 5
+    if (fireDimsSingleModule.get('cnn7x7')):
+        cnnName = 'cnn7x7'
+        kernelSize = 7
+
     with tf.variable_scope(name):
-        with tf.variable_scope('cnn3x3') as scope:
+        with tf.variable_scope(cnnName) as scope:
             layerName = scope.name.replace("/", "_")
             #kernel = _variable_with_weight_decay('weights',
-            #                                     shape=[3, 3, prevLayerDim, fireDims['cnn3x3']],
+            #                                     shape=[kernelSize, kernelSize, prevLayerDim, fireDims['cnn3x3']],
             #                                     initializer=existingParams[layerName]['weights'] if (existingParams is not None and
             #                                                                                         layerName in existingParams) else
             #                                                    (tf.contrib.layers.xavier_initializer_conv2d() if kwargs.get('phase')=='train' else
@@ -380,7 +430,7 @@ def conv_fire_residual_module(name, prevLayerOut, prevLayerDim, historicLayerOut
             #                                                                               layerName in existingParams) else True)
             stddev = np.sqrt(2/np.prod(prevLayerOut.get_shape().as_list()[1:]))
             kernel = _variable_with_weight_decay('weights',
-                                                 shape=[3, 3, prevLayerDim, fireDims['cnn3x3']],
+                                                 shape=[kernelSize, kernelSize, prevLayerDim, fireDims[cnnName]],
                                                  initializer=existingParams[layerName]['weights'] if (existingParams is not None and
                                                                                                      layerName in existingParams) else
                                                                 (tf.random_normal_initializer(stddev=stddev) if kwargs.get('phase')=='train' else
@@ -399,7 +449,7 @@ def conv_fire_residual_module(name, prevLayerOut, prevLayerDim, historicLayerOut
             convRelu = tf.nn.relu(historicLayerOut+conv, name=scope.name)
             _activation_summary(convRelu)
 
-        return convRelu, fireDims['cnn3x3']
+        return convRelu, fireDims[cnnName]
 
 def conv_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwargs):
     USE_FP_16 = kwargs.get('usefp16')
@@ -407,11 +457,21 @@ def conv_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwar
     
     existingParams = kwargs.get('existingParams')
     
+    if (fireDimsSingleModule.get('cnn3x3')):
+        cnnName = 'cnn3x3'
+        kernelSize = 3
+    if (fireDimsSingleModule.get('cnn5x5')):
+        cnnName = 'cnn5x5'
+        kernelSize = 5
+    if (fireDimsSingleModule.get('cnn7x7')):
+        cnnName = 'cnn7x7'
+        kernelSize = 7
+
     with tf.variable_scope(name):
-        with tf.variable_scope('cnn3x3') as scope:
+        with tf.variable_scope(cnnName) as scope:
             layerName = scope.name.replace("/", "_")
             #kernel = _variable_with_weight_decay('weights',
-            #                                     shape=[3, 3, prevLayerDim, fireDims['cnn3x3']],
+            #                                     shape=[kernelSize, kernelSize, prevLayerDim, fireDims['cnn3x3']],
             #                                     initializer=existingParams[layerName]['weights'] if (existingParams is not None and
             #                                                                                         layerName in existingParams) else
             #                                                    (tf.contrib.layers.xavier_initializer_conv2d() if kwargs.get('phase')=='train' else
@@ -422,7 +482,7 @@ def conv_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwar
             #                                                                               layerName in existingParams) else True)
             stddev = np.sqrt(2/np.prod(prevLayerOut.get_shape().as_list()[1:]))
             kernel = _variable_with_weight_decay('weights',
-                                                 shape=[3, 3, prevLayerDim, fireDims['cnn3x3']],
+                                                 shape=[kernelSize, kernelSize, prevLayerDim, fireDims[cnnName]],
                                                  initializer=existingParams[layerName]['weights'] if (existingParams is not None and
                                                                                                      layerName in existingParams) else
                                                                 (tf.random_normal_initializer(stddev=stddev) if kwargs.get('phase')=='train' else
@@ -441,7 +501,7 @@ def conv_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwar
                 biases = tf.get_variable('biases',
                                          initializer=existingParams[layerName]['biases'], dtype=dtype)
             else:
-                biases = tf.get_variable('biases', [fireDims['cnn3x3']],
+                biases = tf.get_variable('biases', [fireDims[cnnName]],
                                          initializer=tf.constant_initializer(0.0),
                                          dtype=dtype)
 
@@ -449,7 +509,7 @@ def conv_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwar
             convRelu = tf.nn.relu(conv, name=scope.name)
             _activation_summary(convRelu)
 
-        return convRelu, fireDims['cnn3x3']
+        return convRelu, fireDims[cnnName]
         
 
 def fc_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwargs):
