@@ -154,7 +154,7 @@ def test():
 
         ######### USE LATEST STATE TO WARP IMAGES
         lossValueSum = 0
-        duration = 0
+        durationSum = 0
         print('Warping images with batch size %d in %d steps' % (modelParams['activeBatchSize'], modelParams['maxSteps']))
         for step in xrange(modelParams['maxSteps']):
             startTime = time.time()
