@@ -148,12 +148,11 @@ def test():
         
         lossValueSum = 0
         durationSum = 0
-<<<<<<< HEAD
         HABperPixelsum = 0
         maxErrbatchsum=0
-=======
+
         print('Warping images with batch size %d in %d steps' % (modelParams['activeBatchSize'], modelParams['maxSteps']))
->>>>>>> 6ba368e32a543e0cb3cce33f9cc3a5b36f0fe991
+
         for step in xrange(modelParams['maxSteps']):
             startTime = time.time()
             evtHAB, evpHAB, lossValue = sess.run([tHAB, pHAB, loss])
