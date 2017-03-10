@@ -163,7 +163,6 @@ def train():
                 numExamplesPerStep = modelParams['activeBatchSize']
                 examplesPerSec = numExamplesPerStep / duration
                 secPerBatch = float(duration)
-
                 format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
                               'sec/batch) pixelErr = %.2f')
                 logging.info(format_str % (datetime.now(), step, lossValue,
@@ -174,14 +173,14 @@ def train():
                 summaryWriter.add_summary(summaryStr, step)
 
             # Save the model checkpoint periodically.
-            if step % FLAGS.modelCheckpointStep == 0 or (step + 1) == modelParams['trainMaxSteps']:
+            if step % FLAGS.modelCheckpointStep == 0 or (step + 1) == modelParams['maxSteps']:
                 checkpointPath = os.path.join(modelParams['trainLogDir'], 'model.ckpt')
                 saver.save(sess, checkpointPath, global_step=step)
             
             # Print Progress Info
-            if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == modelParams['trainMaxSteps']):
+            if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == modelParams['maxSteps']):
                 print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' %
-                        ((100*step)/modelParams['trainMaxSteps'], lossValueSum/(step+1), durationSum/60, (((durationSum*modelParams['trainMaxSteps'])/(step+1))/60)-(durationSum/60)))
+                        ((100*step)/modelParams['maxSteps'], lossValueSum/(step+1), durationSum/60, (((durationSum*modelParams['maxSteps'])/(step+1))/60)-(durationSum/60)))
                 #diff = evtHAB[0,:] - evpHAB[0,:]
                 ## -1: all batches -> 2: rows, 4: cols
                 #diff = diff.reshape(2, 4)

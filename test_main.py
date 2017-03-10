@@ -51,7 +51,7 @@ tf.app.flags.DEFINE_integer('summaryWriteStep', 100,
                             """Number of batches to run.""")
 tf.app.flags.DEFINE_integer('modelCheckpointStep', 1000,
                             """Number of batches to run.""")
-tf.app.flags.DEFINE_integer('ProgressStepReportStep', 250,
+tf.app.flags.DEFINE_integer('ProgressStepReportStep', 10,
                             """Number of batches to run.""")
 ####################################################
 def _get_control_params():
@@ -155,12 +155,12 @@ def test():
         ######### USE LATEST STATE TO WARP IMAGES
         lossValueSum = 0
         duration = 0
-        stepsForOneDataRound = int((modelParams['numExamples']/modelParams['trainBatchSize']))+1
-        print('Warping images with batch size %d in %d steps' % (modelParams['activeBatchSize'], stepsForOneDataRound))
-        for step in xrange(stepsForOneDataRound):
+        print('Warping images with batch size %d in %d steps' % (modelParams['activeBatchSize'], modelParams['maxSteps']))
+        for step in xrange(modelParams['maxSteps']):
             startTime = time.time()
             evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, lossValue = sess.run([imagesOrig, images, pOrig, tHAB, pHAB, tfrecFileIDs, loss])
-            duration = duration + (time.time() - startTime)
+            duration = time.time() - startTime
+            durationSum += duration
 
             assert not np.isnan(lossValue), 'Model diverged with loss = NaN'
 
@@ -176,22 +176,21 @@ def test():
                 numExamplesPerStep = modelParams['activeBatchSize']
                 examplesPerSec = numExamplesPerStep / duration
                 secPerBatch = float(duration)
-
                 format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
-                              'sec/batch), pixelErr = %.3f')
+                              'sec/batch) pixelErr = %.2f')
                 logging.info(format_str % (datetime.now(), step, lossValue,
-                                     examplesPerSec, secPerBatch, lossValueSum/(step+1)))
-            
+                                           examplesPerSec, secPerBatch, lossValuePixel))
+
             if step % FLAGS.summaryWriteStep == 0:
                 summaryStr = sess.run(summaryOp)
                 summaryWriter.add_summary(summaryStr, step)
 
             # Print Progress Info
-            if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == stepsForOneDataRound):
-                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % 
-                        ((100*step)/stepsForOneDataRound, lossValueSum/(step+1), duration/60, (((duration*stepsForOneDataRound)/(step+1))/60)-(duration/60) ) )
+            if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == modelParams['maxSteps']):
+                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' %
+                        ((100*step)/modelParams['maxSteps'], lossValueSum/(step+1), durationSum/60, (((durationSum*modelParams['maxSteps'])/(step+1))/60)-(durationSum/60)))
 
-        print('Average training loss = %.2f - Average time per sample= %.2f s, Steps = %d' % (lossValueSum/(step+1), duration/(step*modelParams['activeBatchSize']), step))
+        print('Average training loss = %.2f - Average time per sample= %.2f s, Steps = %d' % (lossValueSum/(step), duration/(step*modelParams['activeBatchSize']), step))
 
 
 def _setupLogging(logPath):
