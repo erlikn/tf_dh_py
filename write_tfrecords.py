@@ -140,27 +140,31 @@ def train():
         # Start the queue runners.
         tf.train.start_queue_runners(sess=sess)
         
-        lossValueSum = 0
+        HABperPixelsum = 0
         durationSum = 0
-        
         ######### USE LATEST STATE TO WARP IMAGES
         if modelParams['writeWarpedImages']:
-            lossValueSum = 0
             stepsForOneDataRound = int((modelParams['numExamples']/modelParams['activeBatchSize']))+1
             print('Warping images with batch size %d in %d steps' % (modelParams['activeBatchSize'], stepsForOneDataRound))
             for step in xrange(stepsForOneDataRound):
                 startTime = time.time()
                 evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, evlossValue = sess.run([imagesOrig, images, pOrig, tHAB, pHAB, tfrecFileIDs, loss])
-                lossValuePixel = np.sqrt(evlossValue*(2/(modelParams['activeBatchSize']*4)))
-                lossValueSum += lossValuePixel
                 durationSum += (time.time() - startTime)
+                HABRES = evtHAB-evpHAB
+                HABperPixel = 0
+                for i in xrange(modelParams['activeBatchSize']):
+                    H = np.asarray([[HABRES[i][0],HABRES[i][1],HABRES[i][2],HABRES[i][3]],
+                                    [HABRES[i][4],HABRES[i][5],HABRES[i][6],HABRES[i][7]]], np.float32)
+                    HABperPixel += np.sqrt((H*H).sum(axis=0)).mean()
+                HABperPixel = HABperPixel/modelParams['activeBatchSize']
+                HABperPixelsum += HABperPixel
                 #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
                 data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
                 # Print Progress Info
-                if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == stepsForOneDataRound):
+                if ((step % FLAGS.ProgressStepReportStep) == 0) or ((step+1) == stepsForOneDataRound):
                     print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % 
-                            ((100*step)/stepsForOneDataRound, lossValueSum/(step+1), durationSum/60, (((durationSum*stepsForOneDataRound)/(step+1))/60)-(durationSum/60) ) )
-            print('Average training loss = %.2f - Average time per sample= %.2f s, Steps = %d' % (lossValueSum/step, durationSum/(step*modelParams['activeBatchSize']), step))
+                            ((100*step)/stepsForOneDataRound, HABperPixelsum/(step+1), durationSum/60, (((durationSum*stepsForOneDataRound)/(step+1))/60)-(durationSum/60) ) )
+            print('Average training loss = %.2f - Average time per sample= %.2f s, Steps = %d' % (HABperPixelsum/step, durationSum/(step*modelParams['activeBatchSize']), step))
 
 
 def main(argv=None):  # pylint: disable=unused-argumDt

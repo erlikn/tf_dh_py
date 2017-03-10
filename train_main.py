@@ -145,8 +145,8 @@ def train():
         tf.train.start_queue_runners(sess=sess)
 
         summaryWriter = tf.summary.FileWriter(modelParams['trainLogDir'], sess.graph)
-        
-        lossValueSum = 0
+
+        HABperPixelsum = 0
         durationSum = 0
         for step in xrange(modelParams['maxSteps']):
             startTime = time.time()
@@ -155,18 +155,14 @@ def train():
             durationSum += duration 
             assert not np.isnan(lossValue), 'Model diverged with loss = NaN'
 
-            # Calculate pixel error for current batch
-            lossValuePixel = np.sqrt(lossValue*(2/(modelParams['activeBatchSize']*4)))
-            lossValueSum += lossValuePixel
-
             if step % FLAGS.printOutStep == 0:
                 numExamplesPerStep = modelParams['activeBatchSize']
                 examplesPerSec = numExamplesPerStep / duration
                 secPerBatch = float(duration)
                 format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
-                              'sec/batch) pixelErr = %.2f')
+                              'sec/batch), loss/batch = %.2f')
                 logging.info(format_str % (datetime.now(), step, lossValue,
-                                           examplesPerSec, secPerBatch, lossValuePixel))
+                                           examplesPerSec, secPerBatch, lossValue/modelParams['activeBatchSize']))
 
             if step % FLAGS.summaryWriteStep == 0:
                 summaryStr = sess.run(summaryOp)
@@ -178,18 +174,10 @@ def train():
                 saver.save(sess, checkpointPath, global_step=step)
             
             # Print Progress Info
-            if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == modelParams['maxSteps']):
-                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' %
-                        ((100*step)/modelParams['maxSteps'], lossValueSum/(step+1), durationSum/60, (((durationSum*modelParams['maxSteps'])/(step+1))/60)-(durationSum/60)))
-                #diff = evtHAB[0,:] - evpHAB[0,:]
-                ## -1: all batches -> 2: rows, 4: cols
-                #diff = diff.reshape(2, 4)
-                #l2_pixel_loss = np.sqrt((diff*diff).sum(axis=0)).mean()
-                #print(l2_pixel_loss)
-                #print(np.around(evtHAB[0,:], decimals=1))
-                #print('[ %.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f]' % (evpHAB[0,0], evpHAB[0,1], evpHAB[0,2], evpHAB[0,3], evpHAB[0,4], evpHAB[0,5], evpHAB[0,6], evpHAB[0,7]))
-
-
+            if ((step % FLAGS.ProgressStepReportStep) == 0) or ((step+1) == modelParams['maxSteps']):
+                print('Progress: %.2f%%, Elapsed: %.2f mins, Training Completion in: %.2f mins' %
+                        ((100*step)/modelParams['maxSteps'], durationSum/60, (((durationSum*modelParams['maxSteps'])/(step+1))/60)-(durationSum/60)))
+                
         ######### USE LATEST STATE TO WARP IMAGES
         if modelParams['writeWarpedImages']:
             lossValueSum = 0
@@ -198,16 +186,23 @@ def train():
             for step in xrange(stepsForOneDataRound):
                 startTime = time.time()
                 evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, evlossValue = sess.run([imagesOrig, images, pOrig, tHAB, pHAB, tfrecFileIDs, loss])
-                lossValuePixel = np.sqrt(evlossValue*(2/(modelParams['activeBatchSize']*4)))
-                lossValueSum += lossValuePixel
-                durationSum += (time.time() - startTime)
+                duration = time.time() - startTime
+                durationSum += duration
+                HABRES = evtHAB-evpHAB
+                HABperPixel = 0
+                for i in xrange(modelParams['activeBatchSize']):
+                    H = np.asarray([[HABRES[i][0],HABRES[i][1],HABRES[i][2],HABRES[i][3]],
+                                    [HABRES[i][4],HABRES[i][5],HABRES[i][6],HABRES[i][7]]], np.float32)
+                    HABperPixel += np.sqrt((H*H).sum(axis=0)).mean()
+                HABperPixel = HABperPixel/modelParams['activeBatchSize']
+                HABperPixelsum += HABperPixel
                 #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
                 data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
                 # Print Progress Info
-                if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == stepsForOneDataRound):
+                if ((step % FLAGS.ProgressStepReportStep) == 0) or ((step+1) == stepsForOneDataRound):
                     print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % 
-                            ((100*step)/stepsForOneDataRound, lossValueSum/(step+1), durationSum/60, (((durationSum*stepsForOneDataRound)/(step+1))/60)-(durationSum/60) ) )
-            print('Average training loss = %.2f - Average time per sample= %.2f s, Steps = %d' % (lossValueSum/step, durationSum/(step*modelParams['activeBatchSize']), step))
+                            ((100*step)/stepsForOneDataRound, HABperPixelsum/(step+1), durationSum/60, (((durationSum*stepsForOneDataRound)/(step+1))/60)-(durationSum/60) ) )
+            print('Average training loss = %.2f - Average time per sample= %.2f s, Steps = %d' % (HABperPixelsum/step, durationSum/(step*modelParams['activeBatchSize']), step))
 
 
 def _setupLogging(logPath):

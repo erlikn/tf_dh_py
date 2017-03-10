@@ -429,8 +429,8 @@ def write_single():
     # Single Common Parameters
     trainLogDirBase = '../Data/128_logs/tfdh_py_logs/train_logs/'
     testLogDirBase = '../Data/128_logs/tfdh_py_logs/test_logs/'
-    trainDataDir = '../Data/128_train_tfrecords'
-    testDataDir = '../Data/128_test_tfrecords'
+    data['trainDataDir'] = '../Data/128_train_tfrecords'
+    data['testDataDir'] = '../Data/128_test_tfrecords'
 
     data['modelName'] = 'cnn_8l2f'
 
