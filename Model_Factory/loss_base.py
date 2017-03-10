@@ -18,8 +18,8 @@ def add_loss_summaries(total_loss, batchSize):
     loss_averages_op = loss_averages.apply(losses + [total_loss])
 
     # Individual average loss
-    lossPixelIndividual = tf.sqrt(tf.multiply(total_loss, 2/(batchSize*4))) # dvidied by (8/2) = 4 which is equal to sum of 2 of them then sqrt will result in euclidean pixel error
-    tf.summary.scalar('Average_Pixel_Error_Real', lossPixelIndividual)
+#    lossPixelIndividual = tf.sqrt(tf.multiply(total_loss, 2/(batchSize*4))) # dvidied by (8/2) = 4 which is equal to sum of 2 of them then sqrt will result in euclidean pixel error
+#    tf.summary.scalar('Average_Pixel_Error_Real', lossPixelIndividual)
 
     # Attach a scalar summary to all individual losses and the total loss; do the
     # same for the averaged version of the losses.
