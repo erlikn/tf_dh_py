@@ -1126,6 +1126,31 @@ def write_iterative():
         data['batchNorm'] = True
         data['weightNorm'] = False
         write_json_file(runName+'.json', data)
+
+    ##############
+    if reCompileJSON:
+        data['modelName'] = 'twin_cnn_4p8l2f'
+        data['optimizer'] = 'MomentumOptimizer' # AdamOptimizer MomentumOptimizer GradientDescentOptimizer
+        ### ITERATION 1
+        runName = '170208_ITR_B_1'
+        data['trainDataDir'] = '../Data/128_train_tfrecords'
+        data['testDataDir'] = '../Data/128_test_tfrecords'
+        data['trainLogDir'] = trainLogDirBase + runName
+        data['testLogDir'] = testLogDirBase + runName
+        data['warpedTrainDataDir'] = warpedImageTrainBase + runName
+        data['warpedTestDataDir'] = warpedImageTestBase+ runName
+        _set_folders(data['warpedTrainDataDir'])
+        _set_folders(data['warpedTestDataDir'])
+        data['warpOriginalImage'] = True
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = 30000.0
+        data['trainBatchSize'] = 64
+        data['testBatchSize'] = 64
+        data['testMaxSteps'] = int(np.ceil(data['numTestDatasetExamples']/data['testBatchSize']))
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 256, 256, 256, 256, 1024]
+        data['batchNorm'] = True
+        data['weightNorm'] = False
+        write_json_file(runName+'.json', data)
 ####################################################################################
 ####################################################################################
 ####################################################################################
