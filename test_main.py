@@ -155,7 +155,6 @@ def test():
         ######### USE LATEST STATE TO WARP IMAGES
         lossValueSum = 0
         duration = 0
-        PixelErrorSum = 0
         stepsForOneDataRound = int((modelParams['numExamples']/modelParams['trainBatchSize']))+1
         print('Warping images with batch size %d in %d steps' % (modelParams['activeBatchSize'], stepsForOneDataRound))
         for step in xrange(stepsForOneDataRound):
@@ -165,15 +164,14 @@ def test():
 
             assert not np.isnan(lossValue), 'Model diverged with loss = NaN'
 
-            lossValueSum += np.sqrt( (lossValue*2) / (modelParams['activeBatchSize']*4) )
-            HABerror = evtHAB - evpHAB
-            HABerror = np.array([[HABerror[0], HABerror[1], HABerror[2], HABerror[3]],
-                        [HABerror[4], HABerror[5], HABerror[6], HABerror[7]]], np.float32)
-            PixelErrorSum += np.sqrt((HABerror*HABerror).sum(axis=1)).mean()
+            # Calculate pixel error for current batch
+            lossValuePixel = np.sqrt(lossValue*(2/(modelParams['activeBatchSize']*4)))
+            lossValueSum += lossValuePixel
+
             #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
             if modelParams['writeWarpedImages']:
                 data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
-            
+
             if step % FLAGS.printOutStep == 0:
                 numExamplesPerStep = modelParams['activeBatchSize']
                 examplesPerSec = numExamplesPerStep / duration
@@ -191,9 +189,9 @@ def test():
             # Print Progress Info
             if ((step % FLAGS.ProgressStepReportStep) == 0) or (step+1 == stepsForOneDataRound):
                 print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % 
-                        ((100*step)/stepsForOneDataRound, PixelErrorSum/(step+1), duration/60, (((duration*stepsForOneDataRound)/(step+1))/60)-(duration/60) ) )
-        
-        print('Average training loss = %.2f - Average time per sample= %.2f s, Steps = %d' % (PixelErrorSum/(step+1), duration/(step*modelParams['activeBatchSize']), step))
+                        ((100*step)/stepsForOneDataRound, lossValueSum/(step+1), duration/60, (((duration*stepsForOneDataRound)/(step+1))/60)-(duration/60) ) )
+
+        print('Average training loss = %.2f - Average time per sample= %.2f s, Steps = %d' % (lossValueSum/(step+1), duration/(step*modelParams['activeBatchSize']), step))
 
 
 def _setupLogging(logPath):

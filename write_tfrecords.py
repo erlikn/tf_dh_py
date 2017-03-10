@@ -151,7 +151,8 @@ def train():
             for step in xrange(stepsForOneDataRound):
                 startTime = time.time()
                 evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, evlossValue = sess.run([imagesOrig, images, pOrig, tHAB, pHAB, tfrecFileIDs, loss])
-                lossValueSum += np.sqrt(evlossValue*(2/(modelParams['activeBatchSize']*8)))
+                lossValuePixel = np.sqrt(evlossValue*(2/(modelParams['activeBatchSize']*4)))
+                lossValueSum += lossValuePixel
                 durationSum += (time.time() - startTime)
                 #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
                 data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
