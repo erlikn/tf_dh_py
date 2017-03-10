@@ -124,14 +124,14 @@ def inference(images, **kwargs): #batchSize=None, phase='train', outLayer=[13,13
                           padding='SAME', name='maxpool3')
     ############# CONV9 3x3 conv, 64 input dims, 64 output dims (filters)
     fireOut, prevExpandDim = model_base.conv_fire_module('conv9', pool, prevExpandDim,
-                                                         {'cnn3x3': modelShape[6]},
+                                                         {'cnn3x3': modelShape[8]},
                                                          wd, **kwargs)
     # BATCH_NORM -> CONV9
     if kwargs.get('batchNorm'):
         fireOut = model_base.batch_norm('batch_norm', fireOut, dtype)
     ############# CONV10 3x3 conv, 64 input dims, 64 output dims (filters)
     fireOut, prevExpandDim = model_base.conv_fire_module('conv10', fireOut, prevExpandDim,
-                                                         {'cnn3x3': modelShape[7]},
+                                                         {'cnn3x3': modelShape[9]},
                                                          wd, **kwargs)
     # BATCH_NORM -> CONV10
     if kwargs.get('batchNorm'):
@@ -141,14 +141,14 @@ def inference(images, **kwargs): #batchSize=None, phase='train', outLayer=[13,13
                           padding='SAME', name='maxpool3')
     ############# CONV11 3x3 conv, 64 input dims, 64 output dims (filters)
     fireOut, prevExpandDim = model_base.conv_fire_module('conv11', pool, prevExpandDim,
-                                                         {'cnn3x3': modelShape[6]},
+                                                         {'cnn3x3': modelShape[10]},
                                                          wd, **kwargs)
     # BATCH_NORM -> CONV11
     if kwargs.get('batchNorm'):
         fireOut = model_base.batch_norm('batch_norm', fireOut, dtype)
     ############# CONV12 3x3 conv, 64 input dims, 64 output dims (filters)
     fireOut, prevExpandDim = model_base.conv_fire_module('conv12', fireOut, prevExpandDim,
-                                                         {'cnn3x3': modelShape[7]},
+                                                         {'cnn3x3': modelShape[11]},
                                                          wd, **kwargs)
     # BATCH_NORM -> CONV12
     if kwargs.get('batchNorm'):
@@ -164,7 +164,7 @@ def inference(images, **kwargs): #batchSize=None, phase='train', outLayer=[13,13
 
     ############# FC1 layer with 1024 outputs
     fireOut, prevExpandDim = model_base.fc_fire_module('fc1', fireOutFlat, prevExpandDim,
-                                                       {'fc': modelShape[8]},
+                                                       {'fc': modelShape[12]},
                                                        wd, **kwargs)
     # BATCH_NORM -> FC1
     if kwargs.get('batchNorm'):

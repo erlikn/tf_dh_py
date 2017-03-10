@@ -1132,7 +1132,7 @@ def write_iterative():
         data['modelName'] = 'twin_cnn_4p8l2f'
         data['optimizer'] = 'MomentumOptimizer' # AdamOptimizer MomentumOptimizer GradientDescentOptimizer
         ### ITERATION 1
-        runName = '170208_ITR_B_1'
+        runName = '170311_ITR_B_12L_1'
         data['trainDataDir'] = '../Data/128_train_tfrecords'
         data['testDataDir'] = '../Data/128_test_tfrecords'
         data['trainLogDir'] = trainLogDirBase + runName
