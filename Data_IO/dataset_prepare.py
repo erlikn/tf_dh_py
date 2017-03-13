@@ -125,7 +125,8 @@ def generate_random_perturbations(datasetType, img, ID, num, tfRecFolder):
         var = np.sqrt(np.var(H_AB, axis=1))
     return mu, var
 
-def process_dataset(filename, datasetType, readFolder, tfRecFolder):
+def process_dataset(startTime, durationSum, filenames, datasetType, readFolder, tfRecFolder, id):
+    filename=filenames[id]
     if "train" in datasetType:
         if id < 33302: # total of 500000
             num = NUM_OF_TRAIN_PERTURBED_IMAGES + 1
@@ -139,23 +140,22 @@ def process_dataset(filename, datasetType, readFolder, tfRecFolder):
     img = np.asarray(img, np.float32)
     if img.ndim == 2:
         mu, var = generate_random_perturbations(datasetType, img, id, num, tfRecFolder)
-        tMu = tMu + mu
-        tVar = tVar + var
-        totalCount = totalCount + (num)
+        #tMu = tMu + mu
+        #tVar = tVar + var
+        #totalCount = totalCount + (num)
     else:
         print("Not a grayscale")
     if math.floor((id*50)/len(filenames)) != math.floor(((id-1)*50)/len(filenames)):
         durationSum += time.time() - startTime
         print(str(math.floor((id*100)/len(filenames)))+'%  '+str(id))
-        print('Perturbation Statistics: MuXY = %.1f, %.1f , VarXY = %.1f, %.1f , Files = %d' % (mu[0], mu[1], var[0], var[1], totalCount))
+        #print('Perturbation Statistics: MuXY = %.1f, %.1f , VarXY = %.1f, %.1f , Files = %d' % (mu[0], mu[1], var[0], var[1], totalCount))
         print('Elapsed Time: %.2f minutes, To Completion: %.2f minutes' % (durationSum/60, (((durationSum*len(filenames))/(id+1))-durationSum)/60))
         startTime = time.time()
-    id = id+1
+
 def prepare_dataset(datasetType, readFolder, tfRecFolder):
     filenames = [f for f in listdir(readFolder) if isfile(join(readFolder, f))]
     filenames.sort()
     #
-    id = 0
     durationSum = 0
     startTime = time.time()
     totalCount = 0
@@ -163,8 +163,8 @@ def prepare_dataset(datasetType, readFolder, tfRecFolder):
     tVar = np.asarray([0.0, 0.0])
     #for filename in filenames:
     num_cores = multiprocessing.cpu_count()
-    Parallel(n_jobs=num_cores)(delayed(processInput)(filename, datasetType, readFolder, tfRecFolder) for filename in filenames)
-    i=id
+    Parallel(n_jobs=num_cores)(delayed(process_dataset)(startTime, durationSum, filenames, datasetType, readFolder, tfRecFolder, i) for i in range(len(filenames)))
+    i = len(filenames)
     print('100%  Done')
     print('Perturbation Statistics: Average MuXY = %.1f, %.1f , VarXY = %.1f, %.1f , Files = %d' % (tMu[0]/i, tMu[1]/i, tVar[0]/i, tVar[1]/i, totalCount))
     print('Perturbation Statistics: Average MuXY = %.1f       , VarXY = %.1f ' % (np.linalg.norm(tMu/i), np.linalg.norm(tVar/i)))
@@ -212,7 +212,7 @@ test640 = "../../Data/640_480_test_64/"
 testtfRecordFLD = "../../Data/128_test_tfrecords/"
 
 """ Divide dataset (87XXXX) to (5000) test and (82XXX) training samples"""
-divide_train_test(dataRead, train320, test640)
+#divide_train_test(dataRead, train320, test640)
 
 """
     Generate more Test Samples
