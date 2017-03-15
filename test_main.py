@@ -20,6 +20,7 @@ import os.path
 import time
 import logging
 import json
+import csv
 import importlib
 
 import numpy as np
@@ -54,6 +55,11 @@ tf.app.flags.DEFINE_integer('modelCheckpointStep', 1000,
 tf.app.flags.DEFINE_integer('ProgressStepReportStep', 50,
                             """Number of batches to run.""")
 ####################################################
+def _write_to_csv(filePath, dataOutRowList):
+    with open(filePath, 'w') as fileToWrite:
+        writer = csv.writer(fileToWrite, delimiter=',', lineterminator='\n',)
+        writer.writerow(dataOutRowList)
+
 def _get_control_params():
     modelParams['phase'] = PHASE
     #params['shardMeta'] = model_cnn.getShardsMetaInfo(FLAGS.dataDir, params['phase'])
@@ -76,37 +82,15 @@ def _get_control_params():
         modelParams['dataDir'] = modelParams['testDataDir']
         modelParams['warpedOutputFolder'] = modelParams['warpedTestDataDir']
 
-
 def test():
     _get_control_params()
 
     if not os.path.exists(modelParams['dataDir']):
-        raise ValueError("No such data directory %s" % modelParams['dataDir'])    
-
-    #meanImgFi1000le = os.path.join(FLAGS.dataDir, "meta")
-    #if not os.path.isfile(meanImgFile):
-    #    raise ValueError("Warning, no meta file found at %s" % meanImgFile)
-    #else:
-    #    with open(meanImgFile, "r") as inMeanFile:
-    #        meanInfo = json.load(inMeanFile)
-    #
-    #    meanImg = meanInfo['mean']
-    #
-    #    # also load the target output sizes
-    #    params['targSz'] = meanInfo["targSz"]
+        raise ValueError("No such data directory %s" % modelParams['dataDir'])
 
     _setupLogging(os.path.join(modelParams['testLogDir'], "genlog"))
 
     with tf.Graph().as_default():
-        # BGR to RGB
-        #params['meanImg'] = tf.constant(meanImg, dtype=tf.float32)
-
-        # track the number of train calls (basically number of batches processed)
-        globalStep = tf.get_variable('globalStep',
-                                     [],
-                                     initializer=tf.constant_initializer(0),
-                                     trainable=False)
-
         # Get images and transformation for model_cnn.
         imagesOrig, images, pOrig, tHAB, tfrecFileIDs = data_input.inputs(**modelParams)
 
@@ -127,12 +111,11 @@ def test():
         #init = tf.initialize_all_variables()
         init = tf.global_variables_initializer()
 
-        opCheck = tf.add_check_numerics_ops()
         # Start running operations on the Graph.
         config = tf.ConfigProto(log_device_placement=modelParams['logDevicePlacement'])
         config.graph_options.optimizer_options.global_jit_level = tf.OptimizerOptions.ON_1
-        sess = tf.Session(config = config)
-        
+        sess = tf.Session(config=config)
+
         #sess = tf_debug.LocalCLIDebugWrapperSession(sess)
         #sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
         sess.run(init)
@@ -145,39 +128,40 @@ def test():
         tf.train.start_queue_runners(sess=sess)
 
         summaryWriter = tf.summary.FileWriter(modelParams['testLogDir'], sess.graph)
-        
+
         lossValueSum = 0
         durationSum = 0
         HABperPixelsum = 0
-        maxErrbatchsum=0
+        maxErrbatchsum = 0
 
         print('Warping images with batch size %d in %d steps' % (modelParams['activeBatchSize'], modelParams['maxSteps']))
 
+        testValueSampleResults = list()
+        stepFinal = 0
         for step in xrange(modelParams['maxSteps']):
+            # run and get inference
             startTime = time.time()
-            evtHAB, evpHAB, lossValue = sess.run([tHAB, pHAB, loss])
+            evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, evlossValue = sess.run([imagesOrig, images, pOrig, tHAB, pHAB, tfrecFileIDs, loss])
             duration = time.time() - startTime
+            # Calculate actual pixel errors for the current batch with inference results 
             durationSum += duration
             HABRES = evtHAB-evpHAB
             HABperPixel = 0
             maxErrbatch = 0
             for i in xrange(modelParams['activeBatchSize']):
-                H = np.asarray([[HABRES[i][0],HABRES[i][1],HABRES[i][2],HABRES[i][3]],
-                                [HABRES[i][4],HABRES[i][5],HABRES[i][6],HABRES[i][7]]], np.float32)
+                H = np.asarray([[HABRES[i][0], HABRES[i][1], HABRES[i][2], HABRES[i][3]],
+                                [HABRES[i][4], HABRES[i][5], HABRES[i][6], HABRES[i][7]]], np.float32)
                 HABperPixel += np.sqrt((H*H).sum(axis=0)).mean()
-                maxErr = np.asarray([[evtHAB[i][0],evtHAB[i][1],evtHAB[i][2],evtHAB[i][3]],
-                                     [evtHAB[i][4],evtHAB[i][5],evtHAB[i][6],evtHAB[i][7]]], np.float32)
+                testValueSampleResults.append(HABperPixel)
+                maxErr = np.asarray([[evtHAB[i][0], evtHAB[i][1], evtHAB[i][2], evtHAB[i][3]],
+                                     [evtHAB[i][4], evtHAB[i][5], evtHAB[i][6], evtHAB[i][7]]], np.float32)
                 maxErrbatch += np.sqrt((maxErr*maxErr).sum(axis=0)).mean()
             HABperPixel = HABperPixel/modelParams['activeBatchSize']
             maxErrbatch = maxErrbatch/modelParams['activeBatchSize']
             HABperPixelsum += HABperPixel
             maxErrbatchsum += maxErrbatch
-            assert not np.isnan(lossValue), 'Model diverged with loss = NaN'
 
-            # Calculate pixel error for current batch
-            lossValuePixel = np.sqrt(lossValue*(2/(modelParams['activeBatchSize']*4)))
-            lossValueSum += lossValuePixel
-
+            # print out control outputs 
             if step % FLAGS.printOutStep == 0:
                 numExamplesPerStep = modelParams['activeBatchSize']
                 examplesPerSec = numExamplesPerStep / duration
@@ -185,25 +169,35 @@ def test():
                 format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
                               'sec/batch) pixel_err_avg = %.2f max_err_avg = %.2f')
                 logging.info(format_str % (datetime.now(), step, HABperPixel,
-                                           examplesPerSec, secPerBatch, HABperPixelsum/(step+1), maxErrbatchsum/(step+1)))
-
-            if step % FLAGS.summaryWriteStep == 0:
+                                           examplesPerSec, secPerBatch,
+                                           HABperPixelsum/(step+1), maxErrbatchsum/(step+1)))
+            # write summaries
+            if (step % FLAGS.summaryWriteStep == 0) or ((step+1) == modelParams['maxSteps']):
                 summaryStr = sess.run(summaryOp)
                 summaryWriter.add_summary(summaryStr, step)
-            
+
             # Print Progress Info
             if ((step % FLAGS.ProgressStepReportStep) == 0) or ((step+1) == modelParams['maxSteps']):
                 print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins, max_err_avg = %.2f' %
-                        ((100*step)/modelParams['maxSteps'], HABperPixelsum/(step+1), durationSum/60, 
+                        ((100*step)/modelParams['maxSteps'], HABperPixelsum/(step+1), durationSum/60,
                          (((durationSum*modelParams['maxSteps'])/(step+1))/60)-(durationSum/60), maxErrbatchsum/(step+1)))
+            # Write test outputs tfrecords
+            #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
+            if (step == 0):
+                data_output.output_with_test_image_files(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
+            else:
+                data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
+            stepFinal = step
 
+        _write_to_csv(modelParams['testLogDir']+'/testRes'+jsonToRead.replace('.json', '.csv'), testValueSampleResults)
+        step = stepFinal+1
         print('Average test pixel error = %.2f - Average max pixel error = %.2f - Average time per sample= %.2f s, Steps = %d' %
                         (HABperPixelsum/(step), maxErrbatchsum/(step), duration/(step*modelParams['activeBatchSize']), step))
 
 
 def _setupLogging(logPath):
     # cleanup
-    if (os.path.isfile(logPath)):
+    if os.path.isfile(logPath):
         os.remove(logPath)
 
     logging.basicConfig(level=logging.DEBUG,

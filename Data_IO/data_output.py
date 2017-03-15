@@ -120,3 +120,72 @@ def output(batchImageOrig, batchImage, batchPOrig, batchTHAB, batchPHAB, batchTF
             corrupt_patchPert+=1
 
     return corrupt_imageOrig, corrupt_patchOrig, corrupt_patchPert
+
+def write_json_file(filename, datafile):
+    filename = 'Model_Settings/'+filename
+    datafile = collections.OrderedDict(sorted(datafile.items()))
+    with open(filename, 'w') as outFile:
+        json.dump(datafile, outFile, indent = 0)
+
+def _set_folders(folderPath):
+    if not os.path.exists(folderPath):
+        os.makedirs(folderPath)
+
+def output_with_test_image_files(batchImageOrig, batchImage, batchPOrig, batchTHAB, batchPHAB, batchTFrecFileIDs, **kwargs):
+    """
+    TODO: SIMILAR TO DATA INPUT -> WE NEED A QUEUE RUNNER TO WRITE THIS OFF TO BE FASTER 
+
+    Everything evaluated
+    Warp second image based on predicted HAB and write to the new address
+    Args:
+    Returns:
+    Raises:
+      ValueError: If no dataDir
+    """
+    imagesOutputFolder = kwargs.get('testLogDir')+'/images/'
+    _set_folders(imagesOutputFolder)
+    ## for each value call the record writer function
+    corrupt_patchOrig = 0
+    corrupt_patchPert = 0
+    corrupt_imageOrig = 0
+    dataJson = {'pOrig':[], 'tHAB':[], 'pHAB':[]}
+    for i in range(kwargs.get('activeBatchSize')):
+        dataJson['pOrig'] = batchPOrig[i]
+        dataJson['tHAB'] = batchTHAB[i]
+        dataJson['pHAB'] = batchPHAB[i]
+        write_json_file(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1]), dataJson)
+        cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+ str(batchTFrecFileIDs[i][1])+'_fullOrig.jpg', batchImageOrig[i])
+
+        orig, pert = np.asarray(np.split(batchImage[i], 2, axis=2))
+        cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1])+'_ob.jpg', orig)
+        cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1])+'_pb.jpg', pert)
+
+        # Get the difference of tHAB and pHAB, and make new perturbed image based on that
+        cHAB = batchTHAB[i]-batchPHAB[i]
+        # put them in correct form
+        HAB = np.asarray([[cHAB[0], cHAB[1], cHAB[2], cHAB[3]],
+                          [cHAB[4], cHAB[5], cHAB[6], cHAB[7]]], np.float32)
+        pOrig = np.asarray([[batchPOrig[i][0], batchPOrig[i][1], batchPOrig[i][2], batchPOrig[i][3]],
+                            [batchPOrig[i][4], batchPOrig[i][5], batchPOrig[i][6], batchPOrig[i][7]]])
+        if kwargs.get('warpOriginalImage'):
+            patchOrig, patchPert = _warp_w_orig_newTarget(batchImageOrig[i], batchImage[i], pOrig, HAB, **kwargs)
+            # NOT DEVELOPED YET
+            #imageOrig, imagePert = _warp_w_orig_newOrig(batchImageOrig[i], batchImage[i], pOrig, batchPHAB[i], **kwargs)
+        else:
+            patchOrig, patchPert = _warp_wOut_orig_newTarget(batchImage[i], batchPHAB[i])
+
+        cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1])+'_op', patchOrig)
+        cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1])+'_pp', patchPert)
+        # Write each Tensorflow record
+        fileIDs = str(batchTFrecFileIDs[i][0]) + '_' + str(batchTFrecFileIDs[i][1])
+        tfrecord_io.tfrecord_writer(batchImageOrig[i], patchOrig, patchPert, pOrig, HAB,
+                                    imagesOutputFolder,
+                                    fileIDs, batchTFrecFileIDs[i])
+        if batchImageOrig[i].shape[0] != 240:
+            corrupt_imageOrig+=1
+        if patchOrig.shape[0]!=128:
+            corrupt_patchOrig+=1
+        if patchPert.shape[0]!=128:
+            corrupt_patchPert+=1
+
+    return corrupt_imageOrig, corrupt_patchOrig, corrupt_patchPert
