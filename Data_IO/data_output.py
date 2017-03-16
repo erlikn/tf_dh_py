@@ -5,6 +5,9 @@ import cv2 as cv2
 from os import listdir
 from os.path import isfile, join
 from os import walk
+import os
+import json
+import collections
 import math
 import random
 from shutil import copy
@@ -87,7 +90,6 @@ def output(batchImageOrig, batchImage, batchPOrig, batchTHAB, batchPHAB, batchTF
     Raises:
       ValueError: If no dataDir
     """
-    warpedImageFolder = kwargs.get('warpedOutputFolder')+'/'
     ## for each value call the record writer function
     corrupt_patchOrig=0
     corrupt_patchPert=0
@@ -110,7 +112,7 @@ def output(batchImageOrig, batchImage, batchPOrig, batchTHAB, batchPHAB, batchTF
         # Write each Tensorflow record
         fileIDs = str(batchTFrecFileIDs[i][0]) + '_' + str(batchTFrecFileIDs[i][1])
         tfrecord_io.tfrecord_writer(batchImageOrig[i], patchOrig, patchPert, pOrig, HAB,
-                                    warpedImageFolder,
+                                    kwargs.get('warpedOutputFolder')+'/',
                                     fileIDs, batchTFrecFileIDs[i])
         if batchImageOrig[i].shape[0] != 240:
             corrupt_imageOrig+=1
@@ -122,7 +124,7 @@ def output(batchImageOrig, batchImage, batchPOrig, batchTHAB, batchPHAB, batchTF
     return corrupt_imageOrig, corrupt_patchOrig, corrupt_patchPert
 
 def write_json_file(filename, datafile):
-    filename = 'Model_Settings/'+filename
+    filename = 'Model_Settings/../'+filename
     datafile = collections.OrderedDict(sorted(datafile.items()))
     with open(filename, 'w') as outFile:
         json.dump(datafile, outFile, indent = 0)
@@ -150,9 +152,9 @@ def output_with_test_image_files(batchImageOrig, batchImage, batchPOrig, batchTH
     corrupt_imageOrig = 0
     dataJson = {'pOrig':[], 'tHAB':[], 'pHAB':[]}
     for i in range(kwargs.get('activeBatchSize')):
-        dataJson['pOrig'] = batchPOrig[i]
-        dataJson['tHAB'] = batchTHAB[i]
-        dataJson['pHAB'] = batchPHAB[i]
+        dataJson['pOrig'] = batchPOrig[i].tolist()
+        dataJson['tHAB'] = batchTHAB[i].tolist()
+        dataJson['pHAB'] = batchPHAB[i].tolist()
         write_json_file(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1]), dataJson)
         cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+ str(batchTFrecFileIDs[i][1])+'_fullOrig.jpg', batchImageOrig[i])
 
@@ -174,12 +176,12 @@ def output_with_test_image_files(batchImageOrig, batchImage, batchPOrig, batchTH
         else:
             patchOrig, patchPert = _warp_wOut_orig_newTarget(batchImage[i], batchPHAB[i])
 
-        cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1])+'_op', patchOrig)
-        cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1])+'_pp', patchPert)
+        cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1])+'_op.jpg', patchOrig)
+        cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1])+'_pp.jpg', patchPert)
         # Write each Tensorflow record
         fileIDs = str(batchTFrecFileIDs[i][0]) + '_' + str(batchTFrecFileIDs[i][1])
         tfrecord_io.tfrecord_writer(batchImageOrig[i], patchOrig, patchPert, pOrig, HAB,
-                                    imagesOutputFolder,
+                                    kwargs.get('warpedOutputFolder')+'/',
                                     fileIDs, batchTFrecFileIDs[i])
         if batchImageOrig[i].shape[0] != 240:
             corrupt_imageOrig+=1
