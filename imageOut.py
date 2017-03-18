@@ -32,7 +32,7 @@ PHASE = 'test'
 # import json_maker, update json files and read requested json file
 import Model_Settings.json_maker as json_maker
 json_maker.recompile_json_files()
-jsonToRead = '170126_SIN_B.json'
+jsonToRead = 'GPUX_170301_ITR_B_4.json'
 print("Reading %s" % jsonToRead)
 with open('Model_Settings/'+jsonToRead) as data_file:
     modelParams = json.load(data_file)
@@ -56,7 +56,7 @@ tf.app.flags.DEFINE_integer('ProgressStepReportStep', 50,
                             """Number of batches to run.""")
 ####################################################
 def _write_to_csv(filePath, dataOutRowList):
-    with open(filePath, 'a') as fileToWrite:
+    with open(filePath, 'w') as fileToWrite:
         writer = csv.writer(fileToWrite, delimiter=',', lineterminator='\n',)
         writer.writerow(dataOutRowList)
 
@@ -146,55 +146,54 @@ def test():
             # Calculate actual pixel errors for the current batch with inference results 
             durationSum += duration
             HABRES = evtHAB-evpHAB
-            HABperPixel = 0
-            maxErrbatch = 0
-            testValueSampleResults = []
-            for i in xrange(modelParams['activeBatchSize']):
-                H = np.asarray([[HABRES[i][0], HABRES[i][1], HABRES[i][2], HABRES[i][3]],
-                                [HABRES[i][4], HABRES[i][5], HABRES[i][6], HABRES[i][7]]], np.float32)
-                idivImagePixel = np.sqrt((H*H).sum(axis=0)).mean() 
-                testValueSampleResults.append(idivImagePixel)
-                HABperPixel += idivImagePixel
-                
-                maxErr = np.asarray([[evtHAB[i][0], evtHAB[i][1], evtHAB[i][2], evtHAB[i][3]],
-                                     [evtHAB[i][4], evtHAB[i][5], evtHAB[i][6], evtHAB[i][7]]], np.float32)
-                maxErrbatch += np.sqrt((maxErr*maxErr).sum(axis=0)).mean()
-            _write_to_csv(modelParams['testLogDir']+'/testRes'+jsonToRead.replace('.json', '.csv'), testValueSampleResults)
-            HABperPixel = HABperPixel/modelParams['activeBatchSize']
-            maxErrbatch = maxErrbatch/modelParams['activeBatchSize']
-            HABperPixelsum += HABperPixel
-            maxErrbatchsum += maxErrbatch
-            # print out control outputs 
-            if step % FLAGS.printOutStep == 0:
-                numExamplesPerStep = modelParams['activeBatchSize']
-                examplesPerSec = numExamplesPerStep / duration
-                secPerBatch = float(duration)
-                format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
-                              'sec/batch) pixel_err_avg = %.2f max_err_avg = %.2f')
-                logging.info(format_str % (datetime.now(), step, HABperPixel,
-                                           examplesPerSec, secPerBatch,
-                                           HABperPixelsum/(step+1), maxErrbatchsum/(step+1)))
-            # write summaries
-            if (step % FLAGS.summaryWriteStep == 0) or ((step+1) == modelParams['maxSteps']):
-                summaryStr = sess.run(summaryOp)
-                summaryWriter.add_summary(summaryStr, step)
+            if step==1:
+                step = 0
+                HABperPixel = 0
+                maxErrbatch = 0
+                for i in xrange(modelParams['activeBatchSize']):
+                    H = np.asarray([[HABRES[i][0], HABRES[i][1], HABRES[i][2], HABRES[i][3]],
+                                    [HABRES[i][4], HABRES[i][5], HABRES[i][6], HABRES[i][7]]], np.float32)
+                    HABperPixel += np.sqrt((H*H).sum(axis=0)).mean()
+                    testValueSampleResults.append(HABperPixel)
+                    maxErr = np.asarray([[evtHAB[i][0], evtHAB[i][1], evtHAB[i][2], evtHAB[i][3]],
+                                         [evtHAB[i][4], evtHAB[i][5], evtHAB[i][6], evtHAB[i][7]]], np.float32)
+                    maxErrbatch += np.sqrt((maxErr*maxErr).sum(axis=0)).mean()
+                HABperPixel = HABperPixel/modelParams['activeBatchSize']
+                maxErrbatch = maxErrbatch/modelParams['activeBatchSize']
+                HABperPixelsum += HABperPixel
+                maxErrbatchsum += maxErrbatch
 
-            # Print Progress Info
-            if ((step % FLAGS.ProgressStepReportStep) == 0) or ((step+1) == modelParams['maxSteps']):
-                print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins, max_err_avg = %.2f' %
-                        ((100*step)/modelParams['maxSteps'], HABperPixelsum/(step+1), durationSum/60,
-                         (((durationSum*modelParams['maxSteps'])/(step+1))/60)-(durationSum/60), maxErrbatchsum/(step+1)))
-            # Write test outputs tfrecords
-            #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
-            #if (step == 0):
-            #    data_output.output_with_test_image_files(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
-            #else:
-            #    data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
-            stepFinal = step
+                # print out control outputs 
+                if step % FLAGS.printOutStep == 0:
+                    numExamplesPerStep = modelParams['activeBatchSize']
+                    examplesPerSec = numExamplesPerStep / duration
+                    secPerBatch = float(duration)
+                    format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
+                                  'sec/batch) pixel_err_avg = %.2f max_err_avg = %.2f')
+                    logging.info(format_str % (datetime.now(), step, HABperPixel,
+                                               examplesPerSec, secPerBatch,
+                                               HABperPixelsum/(step+1), maxErrbatchsum/(step+1)))
+                # write summaries
+                if (step % FLAGS.summaryWriteStep == 0) or ((step+1) == modelParams['maxSteps']):
+                    summaryStr = sess.run(summaryOp)
+                    summaryWriter.add_summary(summaryStr, step)
 
+                # Print Progress Info
+                if ((step % FLAGS.ProgressStepReportStep) == 0) or ((step+1) == modelParams['maxSteps']):
+                    print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins, max_err_avg = %.2f' %
+                            ((100*step)/modelParams['maxSteps'], HABperPixelsum/(step+1), durationSum/60,
+                             (((durationSum*modelParams['maxSteps'])/(step+1))/60)-(durationSum/60), maxErrbatchsum/(step+1)))
+                # Write test outputs tfrecords
+                #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
+                if (step == 0):
+                    data_output.output_with_test_image_files(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
+                else:
+                    data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
+                stepFinal = step
+                break
         step = stepFinal+1
-        print('Average test pixel error = %.2f - Average max pixel error = %.2f - Average time per sample= %.2f s, Steps = %d, ex/sec = %.2f' %
-                        (HABperPixelsum/(step), maxErrbatchsum/(step), duration/(step*modelParams['activeBatchSize']), step, modelParams['numExamples']/durationSum))
+        print('Average test pixel error = %.2f - Average max pixel error = %.2f - Average time per sample= %.2f s, Steps = %d' %
+                        (HABperPixelsum/(step), maxErrbatchsum/(step), duration/(step*modelParams['activeBatchSize']), step))
 
 
 def _setupLogging(logPath):

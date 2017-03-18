@@ -1115,7 +1115,7 @@ def write_residual():
 ####################################################################################
 
 def recompile_json_files():
-    #write_single()
+    write_single()
     #write_twin()
     #write_twin_correlation()
     write_iterative()

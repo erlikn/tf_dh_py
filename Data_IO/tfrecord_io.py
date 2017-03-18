@@ -101,6 +101,7 @@ def parse_example_proto(exampleSerialized, **kwargs):
                                        kwargs.get('imageTstOrigHeight'),
                                        kwargs.get('imageTstOrigWidth'),
                                        kwargs.get('imageTstOrigChannels'))
+        
     fileID = features['fileID']
     HAB = features['HAB']
     pOrig = features['pOrig']

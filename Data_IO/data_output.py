@@ -156,11 +156,11 @@ def output_with_test_image_files(batchImageOrig, batchImage, batchPOrig, batchTH
         dataJson['tHAB'] = batchTHAB[i].tolist()
         dataJson['pHAB'] = batchPHAB[i].tolist()
         write_json_file(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1]), dataJson)
-        cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+ str(batchTFrecFileIDs[i][1])+'_fullOrig.jpg', batchImageOrig[i])
+        cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+ str(batchTFrecFileIDs[i][1])+'_fullOrig.jpg', batchImageOrig[i]*255)
 
         orig, pert = np.asarray(np.split(batchImage[i], 2, axis=2))
-        cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1])+'_ob.jpg', orig)
-        cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1])+'_pb.jpg', pert)
+        cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1])+'_ob.jpg', orig*255)
+        cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1])+'_pb.jpg', pert*255)
 
         # Get the difference of tHAB and pHAB, and make new perturbed image based on that
         cHAB = batchTHAB[i]-batchPHAB[i]
@@ -176,8 +176,8 @@ def output_with_test_image_files(batchImageOrig, batchImage, batchPOrig, batchTH
         else:
             patchOrig, patchPert = _warp_wOut_orig_newTarget(batchImage[i], batchPHAB[i])
 
-        cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1])+'_op.jpg', patchOrig)
-        cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1])+'_pp.jpg', patchPert)
+        cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1])+'_op.jpg', patchOrig*255)
+        cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1])+'_pp.jpg', patchPert*255)
         # Write each Tensorflow record
         fileIDs = str(batchTFrecFileIDs[i][0]) + '_' + str(batchTFrecFileIDs[i][1])
         tfrecord_io.tfrecord_writer(batchImageOrig[i], patchOrig, patchPert, pOrig, HAB,
