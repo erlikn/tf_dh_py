@@ -629,7 +629,7 @@ def write_iterative():
         ### ITERATION 1
         runName = 'GPUX_170301_ITR_B_1'
         data['trainDataDir'] = '../Data/128_train_tfrecords'
-        data['testDataDir'] = '../Data/128_test_tfrecords'
+        data['testDataDir'] = '../Data/128_test_tfrecords_ob_64'
         data['trainLogDir'] = trainLogDirBase + runName
         data['testLogDir'] = testLogDirBase + runName
         data['warpedTrainDataDir'] = warpedImageTrainBase + runName
