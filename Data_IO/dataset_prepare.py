@@ -13,12 +13,12 @@ from shutil import copy
 import numpy as np
 import matplotlib.pyplot as plt
 import csv
-import tensorflow as tf
+#import tensorflow as tf
 
 from joblib import Parallel, delayed
 import multiprocessing
 
-
+import os
 import tfrecord_io
 
 # Global Variables
@@ -26,6 +26,9 @@ NUM_OF_TEST_PERTURBED_IMAGES = 5
 NUM_OF_TRAIN_PERTURBED_IMAGES = 7
 
 
+def _set_folders(folderPath):
+    if not os.path.exists(folderPath):
+        os.makedirs(folderPath)
 
 def image_process_subMean_divStd(img):
     out = img - np.mean(img)
@@ -153,6 +156,7 @@ def process_dataset(startTime, durationSum, filenames, datasetType, readFolder, 
         startTime = time.time()
 
 def prepare_dataset(datasetType, readFolder, tfRecFolder):
+    print('Reading from:', readFolder)
     filenames = [f for f in listdir(readFolder) if isfile(join(readFolder, f))]
     filenames.sort()
     #
@@ -163,16 +167,19 @@ def prepare_dataset(datasetType, readFolder, tfRecFolder):
     tVar = np.asarray([0.0, 0.0])
     #for filename in filenames:
     num_cores = multiprocessing.cpu_count()
+    #for i in range(len(filenames)):
+    #    process_dataset(startTime, durationSum, filenames, datasetType, readFolder, tfRecFolder, i)
     Parallel(n_jobs=num_cores)(delayed(process_dataset)(startTime, durationSum, filenames, datasetType, readFolder, tfRecFolder, i) for i in range(len(filenames)))
     i = len(filenames)
     print('100%  Done')
-    print('Perturbation Statistics: Average MuXY = %.1f, %.1f , VarXY = %.1f, %.1f , Files = %d' % (tMu[0]/i, tMu[1]/i, tVar[0]/i, tVar[1]/i, totalCount))
-    print('Perturbation Statistics: Average MuXY = %.1f       , VarXY = %.1f ' % (np.linalg.norm(tMu/i), np.linalg.norm(tVar/i)))
+    #print('Perturbation Statistics: Average MuXY = %.1f, %.1f , VarXY = %.1f, %.1f , Files = %d' % (tMu[0]/i, tMu[1]/i, tVar[0]/i, tVar[1]/i, totalCount))
+    #print('Perturbation Statistics: Average MuXY = %.1f       , VarXY = %.1f ' % (np.linalg.norm(tMu/i), np.linalg.norm(tVar/i)))
 
 
 def divide_train_test(readFolder, trainFolder, testFolder):
     filenames = [f for f in listdir(readFolder) if isfile(join(readFolder, f))]
-
+    print('Train folder:', trainFolder)
+    print('Test folder:', testFolder)
     # 5000 test subjects
     testSelector = random.sample(range(0, len(filenames)), 5000)
         
@@ -202,7 +209,6 @@ def divide_train_test(readFolder, trainFolder, testFolder):
 
 
 dataRead = "../../Data/MSCOCO_orig/"
-dataReadGray = "../../Data/MSCOCO_gray/"
 
 train320 = "../../Data/320_240_train_32/"
 traintfRecordFLD = "../../Data/128_train_tfrecords/"
@@ -210,6 +216,11 @@ traintfRecordFLD = "../../Data/128_train_tfrecords/"
 
 test640 = "../../Data/640_480_test_64/"
 testtfRecordFLD = "../../Data/128_test_tfrecords/"
+
+_set_folders(train320)
+_set_folders(traintfRecordFLD)
+_set_folders(test640)
+_set_folders(testtfRecordFLD)
 
 """ Divide dataset (87XXXX) to (5000) test and (82XXX) training samples"""
 #divide_train_test(dataRead, train320, test640)
