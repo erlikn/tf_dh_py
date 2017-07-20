@@ -38,8 +38,10 @@ PHASE = 'train'
 import Model_Settings.json_maker as json_maker
 json_maker.recompile_json_files()
 #jsonToRead = 'GPUX_170301_ITR_B_1.json' #Done
-#jsonToRead = 'GPUX_170301_ITR_B_2.json' #InProgress
-jsonToRead = 'GPUT16_170301_ITR_B_1.json' #InProgress
+#jsonToRead = 'GPUX_170301_ITR_B_2.json' #Done
+#jsonToRead = 'GPUX_170301_ITR_B_3.json' #Done
+jsonToRead = 'GPUX_170301_ITR_B_4.json' #InProgress
+#jsonToRead = 'GPUT16_170301_ITR_B_1.json' #InProgress
 print("Reading %s" % jsonToRead)
 with open('Model_Settings/'+jsonToRead) as data_file:
     modelParams = json.load(data_file)
@@ -143,7 +145,7 @@ def train():
         # Start running operations on the Graph.
         config = tf.ConfigProto(log_device_placement=modelParams['logDevicePlacement'])
         config.gpu_options.allow_growth = True
-        #config.gpu_options.per_process_gpu_memory_fraction = 0.4
+        config.gpu_options.per_process_gpu_memory_fraction = 0.4
         config.graph_options.optimizer_options.global_jit_level = tf.OptimizerOptions.ON_1
         sess = tf.Session(config = config)
         
