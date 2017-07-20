@@ -188,11 +188,18 @@ def prepare_dataset(datasetType, readFolder, tfRecFolder, obsFolder):
     filenames.sort()
     noiseFilenames = [f for f in listdir(obsFolder) if isfile(join(obsFolder, f))]
     random.shuffle(noiseFilenames)
-    for i in range(len(filenames)):
-        process_dataset(filenames, datasetType, readFolder, tfRecFolder, obsFolder, noiseFilenames, i)
-    #num_cores = multiprocessing.cpu_count()-2
-    #Parallel(n_jobs=num_cores)(delayed(process_dataset)(filenames, datasetType, readFolder, tfRecFolder, obsFolder, noiseFilenames, i) for i in range(len(filenames)))
+    #for i in range(len(filenames)):
+    #    process_dataset(filenames, datasetType, readFolder, tfRecFolder, obsFolder, noiseFilenames, i)
+    num_cores = multiprocessing.cpu_count()-2
+    Parallel(n_jobs=num_cores)(delayed(process_dataset)(filenames, datasetType, readFolder, tfRecFolder, obsFolder, noiseFilenames, i) for i in range(len(filenames)))
     print('100%  Done')
+
+
+def moveFiles(fileNames, readFolder, writeFolder, sizeValue, i):
+    img = cv2.imread(readFolder+fileNames[i], 0)
+    img = cv2.resize(img, sizeValue)
+    cv2.imwrite(writeFolder+fileNames[i], img)
+    return
 
 def divide_train_test(readFolder, trainFolder, testFolder):
     filenames = [f for f in listdir(readFolder) if isfile(join(readFolder, f))]
@@ -200,30 +207,30 @@ def divide_train_test(readFolder, trainFolder, testFolder):
     print('Test folder:', testFolder)
     # 5000 test subjects
     testSelector = random.sample(range(0, len(filenames)), 5000)
-        
-    i = 0
-    trainCounter = 0
-    testCounter = 0
-    filenames.sort()
-    for files in filenames:
-        img = cv2.imread(readFolder+files, 0)
+    trainNames = list()
+    testNames = list()
+    for i in range(len(filenames)):
         if i in testSelector:
-            # test image
-            testCounter = testCounter+1
-            img = cv2.resize(img, (640, 480))
-            cv2.imwrite(testFolder+files, img)
+            testNames.append(filenames[i])
         else:
-            # train image
-            trainCounter = trainCounter+1
-            img = cv2.resize(img, (320, 240))
-            cv2.imwrite(trainFolder+files, img)
+            trainNames.append(filenames[i])
 
-        if math.floor((i*10)/len(filenames)) != math.floor(((i-1)*10)/len(filenames)):
-            print(str(math.floor((i*100)/len(filenames)))+'%  '+str(i))
-            print(str(testCounter)+' out of 5000')
-            print(str(trainCounter)+' out of '+str(len(filenames)-5000))
-        i = i+1
-
+    print("Moving Test files...")
+    num_cores = multiprocessing.cpu_count()-2
+    Parallel(n_jobs=num_cores)(delayed(moveFiles)(testNames, readFolder, testFolder, (640, 480), i) for i in range(len(testNames)))
+    #for i in range(len(testNames)):
+    #    img = cv2.imread(readFolder+testNames[i], 0)
+    #    # test image
+    #    img = cv2.resize(img, (640, 480))
+    #    cv2.imwrite(testFolder+testNames[i], img)
+    print("Moving Train files...")
+    num_cores = multiprocessing.cpu_count()-2
+    Parallel(n_jobs=num_cores)(delayed(moveFiles)(trainNames, readFolder, trainFolder, (320, 240), i) for i in range(len(trainNames)))
+    #for i in range(len(trainNames)):
+    #    img = cv2.imread(readFolder+trainNames[i], 0)
+    #    # train image
+    #    img = cv2.resize(img, (320, 240))
+    #    cv2.imwrite(trainFolder+trainNames[i], img)
 
 
 dataRead = "../../Data/MSCOCO_orig/"
