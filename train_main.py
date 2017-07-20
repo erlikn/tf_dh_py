@@ -152,8 +152,8 @@ def train():
         sess.run(init)
 
         # restore a saver.
-        saver = tf.train.Saver(tf.global_variables())
-        saver.restore(sess, modelParams['trainLogDir']+'/model.ckpt-9000')
+        #saver = tf.train.Saver(tf.global_variables())
+        #saver.restore(sess, modelParams['trainLogDir']+'/model.ckpt-9000')
 
         # Start the queue runners.
         tf.train.start_queue_runners(sess=sess)
@@ -252,9 +252,9 @@ def main(argv=None):  # pylint: disable=unused-argumDt
     if input("(Overwrite WARNING) Did you change logs directory? ") != "yes":
         print("Please consider changing logs directory in order to avoid overwrite!")
         return
-    #if tf.gfile.Exists(modelParams['trainLogDir']):
-    #    tf.gfile.DeleteRecursively(modelParams['trainLogDir'])
-    #tf.gfile.MakeDirs(modelParams['trainLogDir'])
+    if tf.gfile.Exists(modelParams['trainLogDir']):
+        tf.gfile.DeleteRecursively(modelParams['trainLogDir'])
+    tf.gfile.MakeDirs(modelParams['trainLogDir'])
     train()
 
 
