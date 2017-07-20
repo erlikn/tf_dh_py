@@ -188,10 +188,10 @@ def prepare_dataset(datasetType, readFolder, tfRecFolder, obsFolder):
     filenames.sort()
     noiseFilenames = [f for f in listdir(obsFolder) if isfile(join(obsFolder, f))]
     random.shuffle(noiseFilenames)
-    #for i in range(len(filenames)):
-    #    process_dataset(filenames, datasetType, readFolder, tfRecFolder, obsFolder, noiseFilenames, i)
-    num_cores = multiprocessing.cpu_count()-2
-    Parallel(n_jobs=num_cores)(delayed(process_dataset)(filenames, datasetType, readFolder, tfRecFolder, obsFolder, noiseFilenames, i) for i in range(len(filenames)))
+    for i in range(len(filenames)):
+        process_dataset(filenames, datasetType, readFolder, tfRecFolder, obsFolder, noiseFilenames, i)
+    #num_cores = multiprocessing.cpu_count()-2
+    #Parallel(n_jobs=num_cores)(delayed(process_dataset)(filenames, datasetType, readFolder, tfRecFolder, obsFolder, noiseFilenames, i) for i in range(len(filenames)))
     print('100%  Done')
 
 def divide_train_test(readFolder, trainFolder, testFolder):
@@ -243,36 +243,40 @@ _set_folders(testtfRecordFLD)
 
 """ Divide dataset (87XXXX) to (5000) test and (82XXX) training samples"""
 #divide_train_test(dataRead, train320, test640)
-
+print('Dividing completed...')
 """
     Generate more Test Samples
     generate 5,000x5=25,000 Samples
     Total Files = 25,000 orig + 25,000 pert + 25,000 origSq 25,000 HAB = 100,000 
 """
 
+WRTIE = True
 
-# setup folders
 # obstacle 16x16
-testtfRecordFLD = "../../Data/128_test_tfrecords_ob_16/"
-traintfRecordFLD = "../../Data/128_train_tfrecords_ob_16/"
-obstaclefolder16 = "../../Data/clutter_16/"
-# obstacle 32x32
-testtfRecordFLD = "../../Data/128_test_tfrecords_ob_32/"
-traintfRecordFLD = "../../Data/128_train_tfrecords_ob_32/"
-obstaclefolder32 = "../../Data/clutter_32/"
-# obstacle 64x64
-testtfRecordFLD = "../../Data/128_test_tfrecords_ob_64/"
-traintfRecordFLD = "../../Data/128_train_tfrecords_ob_64/"
-obstaclefolder64 = "../../Data/clutter_64/"
-
-
-WRITE = True
-
+#testtfRecordFLD = "../../Data/128_test_tfrecords_ob_16/"
+#traintfRecordFLD = "../../Data/128_train_tfrecords_ob_16/"
+#_set_folders(testtfRecordFLD)
+#_set_folders(traintfRecordFLD)
+#obstaclefolder16 = "../../Data/clutter_16/"
 #prepare_dataset("test", test640, testtfRecordFLD, obstaclefolder16)
 #prepare_dataset("train", train320, traintfRecordFLD, obstaclefolder16)
 
+# obstacle 32x32
+testtfRecordFLD = "../../Data/128_test_tfrecords_ob_32/"
+traintfRecordFLD = "../../Data/128_train_tfrecords_ob_32/"
+_set_folders(testtfRecordFLD)
+_set_folders(traintfRecordFLD)
+obstaclefolder32 = "../../Data/clutter_32/"
+print('Wrting test tfrecords...')
 prepare_dataset("test", test640, testtfRecordFLD, obstaclefolder32)
+print('Wrting train tfrecords...')
 prepare_dataset("train", train320, traintfRecordFLD, obstaclefolder32)
 
+# obstacle 64x64
+#testtfRecordFLD = "../../Data/128_test_tfrecords_ob_64/"
+#traintfRecordFLD = "../../Data/128_train_tfrecords_ob_64/"
+#_set_folders(testtfRecordFLD)
+#_set_folders(traintfRecordFLD)
+#obstaclefolder64 = "../../Data/clutter_64/"
 #prepare_dataset("test", test640, testtfRecordFLD, obstaclefolder64)
 #prepare_dataset("train", train320, traintfRecordFLD, obstaclefolder64)
