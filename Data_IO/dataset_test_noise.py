@@ -81,7 +81,7 @@ def perturb_writer( ID, idx,
 
     return
 
-def generate_random_perturbations(datasetType, img, ID, num, tfRecFolder, imgOb):
+def generate_random_perturbations(datasetType, img, ID, num, tfRecFolder, obsFolder, noiseFilenames):
     if "train" in datasetType:
         # if 320x240 => 128x128 w thrPerturbation=32
         squareSize=128
@@ -90,9 +90,12 @@ def generate_random_perturbations(datasetType, img, ID, num, tfRecFolder, imgOb)
         # if 640x480 => 256x256 w thrPerturbation=64
         squareSize=256
         thrPerturbation=64
+    rndListObsSrc = random.sample(range(len(noiseFilenames)), num)
+    rndListObsDst = random.sample(range(len(noiseFilenames)), num)
     rndListRowOrig = random.sample(range(thrPerturbation,img.shape[0]-thrPerturbation-squareSize), num)
     rndListColOrig = random.sample(range(thrPerturbation,img.shape[0]-thrPerturbation-squareSize), num)
     for i in range(0, len(rndListRowOrig)):
+        # read first random perturbation
         pRow = rndListRowOrig[i]
         pCol = rndListColOrig[i]
         imgTempOrig = img[pRow:pRow+squareSize, pCol:pCol+squareSize]
@@ -122,11 +125,24 @@ def generate_random_perturbations(datasetType, img, ID, num, tfRecFolder, imgOb)
             H_AB = H_AB/2
         # attach obstacles
         global WRTIE
+        # Read grayscale obstacle image
+        imgOb = cv2.imread(obsFolder+noiseFilenames[rndListObsSrc[i]], 0)
+        # normalize obstacle image
+        if imgOb.max()-imgOb.min() > 0:
+            imgOb = (imgOb-imgOb.min())/(imgOb.max()-imgOb.min())
+        imgOb = np.asarray(imgOb, np.float32)
+        # Attach Obstacle
         ob_loc_row = random.sample(range(0,imgTempOrig.shape[0]-imgOb.shape[0]),1)[0]
         ob_loc_col = random.sample(range(0,imgTempOrig.shape[1]-imgOb.shape[1]),1)[0]
         imgTempOrig[ob_loc_row:ob_loc_row+imgOb.shape[0], ob_loc_col:ob_loc_col+imgOb.shape[1]] = imgOb
         if WRTIE:
             cv2.imwrite("img_"+str(imgOb.shape[0])+"_orig.jpg", imgTempOrig*255)
+        # Read grayscale obstacle image
+        imgOb = cv2.imread(obsFolder+noiseFilenames[rndListObsDst[i]], 0)
+        # normalize obstacle image
+        if imgOb.max()-imgOb.min() > 0:
+            imgOb = (imgOb-imgOb.min())/(imgOb.max()-imgOb.min())
+        imgOb = np.asarray(imgOb, np.float32)
         ob_loc_row = random.sample(range(0,imgTempPert.shape[0]-imgOb.shape[0]),1)[0]
         ob_loc_col = random.sample(range(0,imgTempPert.shape[1]-imgOb.shape[1]),1)[0]
         imgTempPert[ob_loc_row:ob_loc_row+imgOb.shape[0], ob_loc_col:ob_loc_col+imgOb.shape[1]] = imgOb
@@ -134,14 +150,14 @@ def generate_random_perturbations(datasetType, img, ID, num, tfRecFolder, imgOb)
             cv2.imwrite("img_"+str(imgOb.shape[0])+"_pert.jpg", imgTempPert*255)
             WRTIE = False
 
-        #perturb_writer(ID, i,
-        #               img, imgTempOrig, imgTempPert, H_AB, pOrig,
-        #               tfRecFolder)
+        perturb_writer(ID, i,
+                       img, imgTempOrig, imgTempPert, H_AB, pOrig,
+                       tfRecFolder)
         mu = np.average(H_AB, axis=1)
         var = np.sqrt(np.var(H_AB, axis=1))
     return mu, var
 
-def process_dataset(startTime, durationSum, filenames, datasetType, readFolder, tfRecFolder, imgOb, id):
+def process_dataset(filenames, datasetType, readFolder, tfRecFolder, obsFolder, noiseFilenames, id):
     filename=filenames[id]
     if "train" in datasetType:
         if id < 33302: # total of 500000
@@ -151,71 +167,30 @@ def process_dataset(startTime, durationSum, filenames, datasetType, readFolder, 
     else: # test
         num = NUM_OF_TEST_PERTURBED_IMAGES
     img = cv2.imread(readFolder+filename, 0)
+    # normalize image
     if img.max()-img.min() > 0:
         img = (img-img.min())/(img.max()-img.min())
     img = np.asarray(img, np.float32)
-    if imgOb.max()-imgOb.min() > 0:
-        imgOb = (imgOb-imgOb.min())/(imgOb.max()-imgOb.min())
-    imgOb = np.asarray(imgOb, np.float32)
+    # make sure grayscale
     if img.ndim == 2:
-        mu, var = generate_random_perturbations(datasetType, img, id, num, tfRecFolder, imgOb)
+        mu, var = generate_random_perturbations(datasetType, img, id, num, tfRecFolder, obsFolder, noiseFilenames)
         #tMu = tMu + mu
         #tVar = tVar + var
         #totalCount = totalCount + (num)
     else:
         print("Not a grayscale")
-    if math.floor((id*50)/len(filenames)) != math.floor(((id-1)*50)/len(filenames)):
-        durationSum += time.time() - startTime
-        print(str(math.floor((id*100)/len(filenames)))+'%  '+str(id))
-        #print('Perturbation Statistics: MuXY = %.1f, %.1f , VarXY = %.1f, %.1f , Files = %d' % (mu[0], mu[1], var[0], var[1], totalCount))
-        print('Elapsed Time: %.2f minutes, To Completion: %.2f minutes' % (durationSum/60, (((durationSum*len(filenames))/(id+1))-durationSum)/60))
-        startTime = time.time()
 
-def prepare_dataset(datasetType, readFolder, tfRecFolder, imgOb):
+def prepare_dataset(datasetType, readFolder, tfRecFolder, obsFolder):
     filenames = [f for f in listdir(readFolder) if isfile(join(readFolder, f))]
     filenames.sort()
-    filenames = filenames[100:101]
-
-    #
-    durationSum = 0
-    startTime = time.time()
-    totalCount = 0
-    tMu = np.asarray([0.0, 0.0])
-    tVar = np.asarray([0.0, 0.0])
-    #for filename in filenames:
-    num_cores = multiprocessing.cpu_count()
-    Parallel(n_jobs=num_cores)(delayed(process_dataset)(startTime, durationSum, filenames, datasetType, readFolder, tfRecFolder, imgOb, i) for i in range(len(filenames)))
-    i = len(filenames)
+    noiseFilenames = [f for f in listdir(obsFolder) if isfile(join(obsFolder, f))]
+    random.shuffle(noiseFilenames)
+    #for i in range(len(filenames)):
+    #    process_dataset(filenames, datasetType, readFolder, tfRecFolder, obsFolder, noiseFilenames, i)
+    num_cores = multiprocessing.cpu_count()-2
+    Parallel(n_jobs=num_cores)(delayed(process_dataset)(filenames, datasetType, readFolder, tfRecFolder, obsFolder, noiseFilenames, i) for i in range(len(filenames)))
     print('100%  Done')
-    print('Perturbation Statistics: Average MuXY = %.1f, %.1f , VarXY = %.1f, %.1f , Files = %d' % (tMu[0]/i, tMu[1]/i, tVar[0]/i, tVar[1]/i, totalCount))
-    print('Perturbation Statistics: Average MuXY = %.1f       , VarXY = %.1f ' % (np.linalg.norm(tMu/i), np.linalg.norm(tVar/i)))
 
-
-def divide_train_test(readFolder, trainFolder, testFolder):
-    filenames = [f for f in listdir(readFolder) if isfile(join(readFolder, f))]
-    # 5000 test subjects
-    testSelector = random.sample(range(0, len(filenames)), 5000)
-    i = 0
-    trainCounter = 0
-    testCounter = 0
-    filenames.sort()
-    for files in filenames:
-        img = cv2.imread(readFolder+files, 0)
-        if i in testSelector:
-            # test image
-            testCounter = testCounter+1
-            img = cv2.resize(img, (640, 480))
-            cv2.imwrite(testFolder+files, img)
-        else:
-            # train image
-            trainCounter = trainCounter+1
-            img = cv2.resize(img, (320, 240))
-            cv2.imwrite(trainFolder+files, img)
-        if math.floor((i*10)/len(filenames)) != math.floor(((i-1)*10)/len(filenames)):
-            print(str(math.floor((i*100)/len(filenames)))+'%  '+str(i))
-            print(str(testCounter)+' out of 5000')
-            print(str(trainCounter)+' out of '+str(len(filenames)-5000))
-        i = i+1
 
 def _set_folders(folderPath):
     if not os.path.exists(folderPath):
@@ -225,25 +200,35 @@ def _set_folders(folderPath):
 dataRead = "../../Data/MSCOCO_orig/"
 dataReadGray = "../../Data/MSCOCO_gray/"
 test640 = "../../Data/640_480_test/"
-obst_folder = "../../Data/Obstacle/"
 
 WRTIE = True
 # use 16x16
 testtfRecordFLD = "../../Data/128_test_tfrecords_ob_16/"
 _set_folders(testtfRecordFLD)
-imgOb = cv2.imread(obst_folder+'ob_16.jpg', 0)
-prepare_dataset("test", test640, testtfRecordFLD, imgOb)
+obstaclefolder = "../../Data/clutter/clutter_all_16/"
+print("Processing 16.......")
+prepare_dataset("test", test640, testtfRecordFLD, obstaclefolder)
+print("Completed-----------\n")
 
 WRTIE = True
 # use 32x32
 testtfRecordFLD = "../../Data/128_test_tfrecords_ob_32/"
 _set_folders(testtfRecordFLD)
-imgOb = cv2.imread(obst_folder+'ob_32.jpg', 0)
-prepare_dataset("test", test640, testtfRecordFLD, imgOb)
+obstaclefolder = "../../Data/clutter/clutter_all_32/"
+print("Processing 32.......")
+prepare_dataset("test", test640, testtfRecordFLD, obstaclefolder)
+print("Completed-----------\n")
 
 WRTIE = True
 # obstacle 64x64
 testtfRecordFLD = "../../Data/128_test_tfrecords_ob_64/"
 _set_folders(testtfRecordFLD)
-imgOb = cv2.imread(obst_folder+'ob_64.jpg', 0)
-prepare_dataset("test", test640, testtfRecordFLD, imgOb)
+obstaclefolder = "../../Data/clutter/clutter_all_64/"
+print("Processing 64.......")
+prepare_dataset("test", test640, testtfRecordFLD, obstaclefolder)
+print("Completed-----------\n")
+
+
+
+# get address of all clutter files os specific size
+# randomly add them to the images

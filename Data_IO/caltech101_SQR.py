@@ -21,7 +21,7 @@ def process_dataset(readFolder, filenames, writeFolder, imgsqrsize, id):
     filename=filenames[id]
     img = cv2.imread(readFolder+filename, 0)
     img = cv2.resize(img, (imgsqrsize, imgsqrsize))
-    cv2.imwrite(writeFolder+str(id)+".jpg", imgsqrsize)
+    cv2.imwrite(writeFolder+str(id)+".jpg", img)
 
 def prepare_dataset(readFolder, writeFolder, imgsqrsize):
     filenames = [f for f in listdir(readFolder) if isfile(join(readFolder, f))]

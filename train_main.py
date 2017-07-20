@@ -30,14 +30,14 @@ import tensorflow as tf
 import os
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"]="1"
-from tensorflow.python.client import device_lib
-print(device_lib.list_local_devices())
+#from tensorflow.python.client import device_lib
+#print(device_lib.list_local_devices())
 
 PHASE = 'train'
 # import json_maker, update json files and read requested json file
 import Model_Settings.json_maker as json_maker
 json_maker.recompile_json_files()
-jsonToRead = 'GPUY_170208_ITR_B_1.json'
+jsonToRead = 'GPUX_170301_ITR_B_2.json'
 print("Reading %s" % jsonToRead)
 with open('Model_Settings/'+jsonToRead) as data_file:
     modelParams = json.load(data_file)
@@ -140,12 +140,18 @@ def train():
         opCheck = tf.add_check_numerics_ops()
         # Start running operations on the Graph.
         config = tf.ConfigProto(log_device_placement=modelParams['logDevicePlacement'])
+        config.gpu_options.allow_growth = True
+        config.gpu_options.per_process_gpu_memory_fraction = 0.4
         config.graph_options.optimizer_options.global_jit_level = tf.OptimizerOptions.ON_1
         sess = tf.Session(config = config)
         
         #sess = tf_debug.LocalCLIDebugWrapperSession(sess)
         #sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
         sess.run(init)
+
+        # restore a saver.
+        saver = tf.train.Saver(tf.global_variables())
+        saver.restore(sess, modelParams['trainLogDir']+'/model.ckpt-9000')
 
         # Start the queue runners.
         tf.train.start_queue_runners(sess=sess)
@@ -154,7 +160,7 @@ def train():
 
         HABperPixelsum = 0
         durationSum = 0
-        for step in xrange(modelParams['maxSteps']):
+        for step in xrange(9000,modelParams['maxSteps']):
             startTime = time.time()
             _, lossValue = sess.run([opTrain, loss])
             duration = time.time() - startTime
@@ -244,9 +250,9 @@ def main(argv=None):  # pylint: disable=unused-argumDt
     if input("(Overwrite WARNING) Did you change logs directory? ") != "yes":
         print("Please consider changing logs directory in order to avoid overwrite!")
         return
-    if tf.gfile.Exists(modelParams['trainLogDir']):
-        tf.gfile.DeleteRecursively(modelParams['trainLogDir'])
-    tf.gfile.MakeDirs(modelParams['trainLogDir'])
+    #if tf.gfile.Exists(modelParams['trainLogDir']):
+    #    tf.gfile.DeleteRecursively(modelParams['trainLogDir'])
+    #tf.gfile.MakeDirs(modelParams['trainLogDir'])
     train()
 
 
