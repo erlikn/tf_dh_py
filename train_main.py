@@ -40,7 +40,7 @@ json_maker.recompile_json_files()
 #jsonToRead = 'GPUX_170301_ITR_B_1.json' #Done
 #jsonToRead = 'GPUX_170301_ITR_B_2.json' #Done
 #jsonToRead = 'GPUX_170301_ITR_B_3.json' #Done
-jsonToRead = 'GPUX_170301_ITR_B_4.json' #InProgress
+#jsonToRead = 'GPUX_170301_ITR_B_4.json' #Done
 #jsonToRead = 'GPUT16_170301_ITR_B_1.json' #InProgress
 print("Reading %s" % jsonToRead)
 with open('Model_Settings/'+jsonToRead) as data_file:

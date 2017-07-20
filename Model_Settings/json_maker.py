@@ -713,7 +713,6 @@ def write_iterative():
         data['weightNorm'] = False
         write_json_file(runName+'.json', data)
 
-    
     if reCompileJSON:
         data['modelName'] = 'twin_cnn_4p4l2f'
         data['optimizer'] = 'MomentumOptimizer' # AdamOptimizer MomentumOptimizer GradientDescentOptimizer
@@ -799,7 +798,7 @@ def write_iterative():
         write_json_file(runName+'.json', data)
 
     if reCompileJSON:
-            data['modelName'] = 'twin_cnn_4p4l2f'
+        data['modelName'] = 'twin_cnn_4p4l2f'
         data['optimizer'] = 'MomentumOptimizer' # AdamOptimizer MomentumOptimizer GradientDescentOptimizer
         ### ITERATION 1
         runName = 'GPUINC_170301_ITR_B_1'

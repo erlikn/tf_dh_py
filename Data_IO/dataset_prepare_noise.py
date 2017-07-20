@@ -19,6 +19,8 @@ from joblib import Parallel, delayed
 import multiprocessing
 
 import os
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 import tfrecord_io
 
 # Global Variables
@@ -240,7 +242,7 @@ _set_folders(test640)
 _set_folders(testtfRecordFLD)
 
 """ Divide dataset (87XXXX) to (5000) test and (82XXX) training samples"""
-divide_train_test(dataRead, train320, test640)
+#divide_train_test(dataRead, train320, test640)
 
 """
     Generate more Test Samples
@@ -252,21 +254,25 @@ divide_train_test(dataRead, train320, test640)
 # setup folders
 # obstacle 16x16
 testtfRecordFLD = "../../Data/128_test_tfrecords_ob_16/"
+traintfRecordFLD = "../../Data/128_train_tfrecords_ob_16/"
 obstaclefolder16 = "../../Data/clutter_16/"
 # obstacle 32x32
 testtfRecordFLD = "../../Data/128_test_tfrecords_ob_32/"
+traintfRecordFLD = "../../Data/128_train_tfrecords_ob_32/"
 obstaclefolder32 = "../../Data/clutter_32/"
 # obstacle 64x64
 testtfRecordFLD = "../../Data/128_test_tfrecords_ob_64/"
+traintfRecordFLD = "../../Data/128_train_tfrecords_ob_64/"
 obstaclefolder64 = "../../Data/clutter_64/"
 
 
+WRITE = True
 
-prepare_dataset("test", test640, testtfRecordFLD, obstaclefolder16)
-prepare_dataset("train", train320, traintfRecordFLD, obstaclefolder16)
+#prepare_dataset("test", test640, testtfRecordFLD, obstaclefolder16)
+#prepare_dataset("train", train320, traintfRecordFLD, obstaclefolder16)
 
-#prepare_dataset("test", test640, testtfRecordFLD, obstaclefolder32)
-#prepare_dataset("train", train320, traintfRecordFLD, obstaclefolder32)
+prepare_dataset("test", test640, testtfRecordFLD, obstaclefolder32)
+prepare_dataset("train", train320, traintfRecordFLD, obstaclefolder32)
 
 #prepare_dataset("test", test640, testtfRecordFLD, obstaclefolder64)
 #prepare_dataset("train", train320, traintfRecordFLD, obstaclefolder64)
