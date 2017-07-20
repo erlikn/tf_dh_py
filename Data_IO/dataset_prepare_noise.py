@@ -6,7 +6,6 @@ from os import listdir
 from os.path import isfile, join
 from os import walk
 from datetime import datetime
-import os
 import time
 import math
 import random
@@ -14,20 +13,22 @@ from shutil import copy
 import numpy as np
 import matplotlib.pyplot as plt
 import csv
-import tensorflow as tf
+#import tensorflow as tf
 
 from joblib import Parallel, delayed
 import multiprocessing
 
-
+import os
 import tfrecord_io
 
 # Global Variables
 NUM_OF_TEST_PERTURBED_IMAGES = 5
 NUM_OF_TRAIN_PERTURBED_IMAGES = 7
-WRTIE = True
 
 
+def _set_folders(folderPath):
+    if not os.path.exists(folderPath):
+        os.makedirs(folderPath)
 
 def image_process_subMean_divStd(img):
     out = img - np.mean(img)
@@ -173,7 +174,7 @@ def process_dataset(filenames, datasetType, readFolder, tfRecFolder, obsFolder, 
     img = np.asarray(img, np.float32)
     # make sure grayscale
     if img.ndim == 2:
-        mu, var = generate_random_perturbations(datasetType, img, id, num, tfRecFolder, obsFolder, noiseFilenames)
+        mu, var = generate_random_perturbations(datasetType, img, id+1000000, num, tfRecFolder, obsFolder, noiseFilenames)
         #tMu = tMu + mu
         #tVar = tVar + var
         #totalCount = totalCount + (num)
@@ -191,44 +192,81 @@ def prepare_dataset(datasetType, readFolder, tfRecFolder, obsFolder):
     Parallel(n_jobs=num_cores)(delayed(process_dataset)(filenames, datasetType, readFolder, tfRecFolder, obsFolder, noiseFilenames, i) for i in range(len(filenames)))
     print('100%  Done')
 
+def divide_train_test(readFolder, trainFolder, testFolder):
+    filenames = [f for f in listdir(readFolder) if isfile(join(readFolder, f))]
+    print('Train folder:', trainFolder)
+    print('Test folder:', testFolder)
+    # 5000 test subjects
+    testSelector = random.sample(range(0, len(filenames)), 5000)
+        
+    i = 0
+    trainCounter = 0
+    testCounter = 0
+    filenames.sort()
+    for files in filenames:
+        img = cv2.imread(readFolder+files, 0)
+        if i in testSelector:
+            # test image
+            testCounter = testCounter+1
+            img = cv2.resize(img, (640, 480))
+            cv2.imwrite(testFolder+files, img)
+        else:
+            # train image
+            trainCounter = trainCounter+1
+            img = cv2.resize(img, (320, 240))
+            cv2.imwrite(trainFolder+files, img)
 
-def _set_folders(folderPath):
-    if not os.path.exists(folderPath):
-        os.makedirs(folderPath)
+        if math.floor((i*10)/len(filenames)) != math.floor(((i-1)*10)/len(filenames)):
+            print(str(math.floor((i*100)/len(filenames)))+'%  '+str(i))
+            print(str(testCounter)+' out of 5000')
+            print(str(trainCounter)+' out of '+str(len(filenames)-5000))
+        i = i+1
 
-####################################
+
+
 dataRead = "../../Data/MSCOCO_orig/"
-dataReadGray = "../../Data/MSCOCO_gray/"
-test640 = "../../Data/640_480_test/"
 
-WRTIE = True
-# use 16x16
+train320 = "../../Data/320_240_train_32/"
+traintfRecordFLD = "../../Data/128_train_tfrecords/"
+
+
+test640 = "../../Data/640_480_test_64/"
+testtfRecordFLD = "../../Data/128_test_tfrecords/"
+
+_set_folders(train320)
+_set_folders(traintfRecordFLD)
+
+_set_folders(test640)
+_set_folders(testtfRecordFLD)
+
+""" Divide dataset (87XXXX) to (5000) test and (82XXX) training samples"""
+divide_train_test(dataRead, train320, test640)
+
+"""
+    Generate more Test Samples
+    generate 5,000x5=25,000 Samples
+    Total Files = 25,000 orig + 25,000 pert + 25,000 origSq 25,000 HAB = 100,000 
+"""
+
+
+# setup folders
+# obstacle 16x16
 testtfRecordFLD = "../../Data/128_test_tfrecords_ob_16/"
-_set_folders(testtfRecordFLD)
-obstaclefolder = "../../Data/clutter/clutter_all_16/"
-print("Processing 16.......")
-prepare_dataset("test", test640, testtfRecordFLD, obstaclefolder)
-print("Completed-----------\n")
-
-WRTIE = True
-# use 32x32
+obstaclefolder16 = "../../Data/clutter_16/"
+# obstacle 32x32
 testtfRecordFLD = "../../Data/128_test_tfrecords_ob_32/"
-_set_folders(testtfRecordFLD)
-obstaclefolder = "../../Data/clutter/clutter_all_32/"
-print("Processing 32.......")
-prepare_dataset("test", test640, testtfRecordFLD, obstaclefolder)
-print("Completed-----------\n")
-
-WRTIE = True
+obstaclefolder32 = "../../Data/clutter_32/"
 # obstacle 64x64
 testtfRecordFLD = "../../Data/128_test_tfrecords_ob_64/"
-_set_folders(testtfRecordFLD)
-obstaclefolder = "../../Data/clutter/clutter_all_64/"
-print("Processing 64.......")
-prepare_dataset("test", test640, testtfRecordFLD, obstaclefolder)
-print("Completed-----------\n")
+obstaclefolder64 = "../../Data/clutter_64/"
 
 
 
-# get address of all clutter files os specific size
-# randomly add them to the images
+prepare_dataset("test", test640, testtfRecordFLD, obstaclefolder16)
+prepare_dataset("train", train320, traintfRecordFLD, obstaclefolder16)
+
+#prepare_dataset("test", test640, testtfRecordFLD, obstaclefolder32)
+#prepare_dataset("train", train320, traintfRecordFLD, obstaclefolder32)
+
+#prepare_dataset("test", test640, testtfRecordFLD, obstaclefolder64)
+#prepare_dataset("train", train320, traintfRecordFLD, obstaclefolder64)
