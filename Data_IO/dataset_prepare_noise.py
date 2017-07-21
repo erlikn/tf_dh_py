@@ -101,7 +101,7 @@ def generate_random_perturbations(datasetType, img, ID, num, tfRecFolder, obsFol
         # read first random perturbation
         pRow = rndListRowOrig[i]
         pCol = rndListColOrig[i]
-        img[pRow:pRow+squareSize, pCol:pCol+squareSize].copyTo(imgTempOrig)
+        imgTempOrig = img[pRow:pRow+squareSize, pCol:pCol+squareSize].copy()
         # p & 0 is top left    - 1 is top right
         # 2     is bottom left - 3 is bottom right
         pOrig = np.array([[pRow, pRow, pRow+squareSize, pRow+squareSize],
@@ -117,7 +117,7 @@ def generate_random_perturbations(datasetType, img, ID, num, tfRecFolder, obsFol
         dst = cv2.warpPerspective(img, Hmatrix, (img.shape[1], img.shape[0]))
         #print(img.shape)
         # crop the image at original location
-        imgTempPert = dst[pRow:pRow+squareSize, pCol:pCol+squareSize]
+        imgTempPert = dst[pRow:pRow+squareSize, pCol:pCol+squareSize].copy()
         if dst.max() > 256:
             print("NORMALIZATION to uint8 NEEDED!!!!!!!!!!")
         # Write down outputs
@@ -153,12 +153,12 @@ def generate_random_perturbations(datasetType, img, ID, num, tfRecFolder, obsFol
             cv2.imwrite("img_"+str(imgOb.shape[0])+"_pert.jpg", imgTempPert*255)
             WRTIE = False
 
-        cv2.imshow('image',img)
-        cv2.waitKey(0)
-        cv2.imshow('imageOrig',imgTempOrig)
-        cv2.waitKey(0)
-        cv2.imshow('imagePert',imgTempPert)
-        cv2.waitKey(0)
+        #cv2.imshow('image',img)
+        #cv2.waitKey(0)
+        #cv2.imshow('imageOrig',imgTempOrig)
+        #cv2.waitKey(0)
+        #cv2.imshow('imagePert',imgTempPert)
+        #cv2.waitKey(0)
         perturb_writer(ID, i,
                        img, imgTempOrig, imgTempPert, H_AB, pOrig,
                        tfRecFolder)
@@ -255,7 +255,7 @@ _set_folders(test640)
 _set_folders(testtfRecordFLD)
 
 """ Divide dataset (87XXXX) to (5000) test and (82XXX) training samples"""
-divide_train_test(dataRead, train320, test640)
+#divide_train_test(dataRead, train320, test640)
 print('Dividing completed...')
 """
     Generate more Test Samples
