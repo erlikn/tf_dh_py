@@ -29,7 +29,7 @@ import tensorflow as tf
 
 import os
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 #from tensorflow.python.client import device_lib
 #print(device_lib.list_local_devices())
 
@@ -41,7 +41,9 @@ json_maker.recompile_json_files()
 #jsonToRead = 'GPUX_170301_ITR_B_2.json' #Done
 #jsonToRead = 'GPUX_170301_ITR_B_3.json' #Done
 #jsonToRead = 'GPUX_170301_ITR_B_4.json' #Done
-#jsonToRead = 'GPUT16_170301_ITR_B_1.json' #InProgress
+#jsonToRead = 'GPUT32_170301_ITR_B_1.json' #InProgress -- 
+#jsonToRead = 'GPUINC_170301_ITR_B_1.json' #InProgress
+jsonToRead = 'GPUXCE_170301_ITR_B_1.json' #InProgress
 print("Reading %s" % jsonToRead)
 with open('Model_Settings/'+jsonToRead) as data_file:
     modelParams = json.load(data_file)
@@ -145,7 +147,7 @@ def train():
         # Start running operations on the Graph.
         config = tf.ConfigProto(log_device_placement=modelParams['logDevicePlacement'])
         config.gpu_options.allow_growth = True
-        config.gpu_options.per_process_gpu_memory_fraction = 0.4
+        #config.gpu_options.per_process_gpu_memory_fraction = 0.4
         config.graph_options.optimizer_options.global_jit_level = tf.OptimizerOptions.ON_1
         sess = tf.Session(config = config)
         

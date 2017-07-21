@@ -101,7 +101,7 @@ def generate_random_perturbations(datasetType, img, ID, num, tfRecFolder, obsFol
         # read first random perturbation
         pRow = rndListRowOrig[i]
         pCol = rndListColOrig[i]
-        imgTempOrig = img[pRow:pRow+squareSize, pCol:pCol+squareSize]
+        img[pRow:pRow+squareSize, pCol:pCol+squareSize].copyTo(imgTempOrig)
         # p & 0 is top left    - 1 is top right
         # 2     is bottom left - 3 is bottom right
         pOrig = np.array([[pRow, pRow, pRow+squareSize, pRow+squareSize],
@@ -153,6 +153,12 @@ def generate_random_perturbations(datasetType, img, ID, num, tfRecFolder, obsFol
             cv2.imwrite("img_"+str(imgOb.shape[0])+"_pert.jpg", imgTempPert*255)
             WRTIE = False
 
+        cv2.imshow('image',img)
+        cv2.waitKey(0)
+        cv2.imshow('imageOrig',imgTempOrig)
+        cv2.waitKey(0)
+        cv2.imshow('imagePert',imgTempPert)
+        cv2.waitKey(0)
         perturb_writer(ID, i,
                        img, imgTempOrig, imgTempPert, H_AB, pOrig,
                        tfRecFolder)
@@ -235,11 +241,11 @@ def divide_train_test(readFolder, trainFolder, testFolder):
 
 dataRead = "../../Data/MSCOCO_orig/"
 
-train320 = "../../Data/320_240_train_32/"
+train320 = "../../Data/320_240_train/"
 traintfRecordFLD = "../../Data/128_train_tfrecords/"
 
 
-test640 = "../../Data/640_480_test_64/"
+test640 = "../../Data/640_480_test/"
 testtfRecordFLD = "../../Data/128_test_tfrecords/"
 
 _set_folders(train320)
@@ -249,7 +255,7 @@ _set_folders(test640)
 _set_folders(testtfRecordFLD)
 
 """ Divide dataset (87XXXX) to (5000) test and (82XXX) training samples"""
-#divide_train_test(dataRead, train320, test640)
+divide_train_test(dataRead, train320, test640)
 print('Dividing completed...')
 """
     Generate more Test Samples

@@ -36,7 +36,7 @@ from __future__ import division
 
 import tensorflow as tf
 
-import Model_Factory.model_base_inception as model_base
+import Model_Factory.model_base_xception as model_base
 
 USE_FP_16 = False
 
@@ -55,14 +55,14 @@ def inference(images, **kwargs): #batchSize=None, phase='train', outLayer=[13,13
     batchSize = kwargs.get('activeBatchSize', None)
 
     ############# CONV1_TWIN 3x3 conv, 2 input dims, 2 parallel modules, 64 output dims (filters)
-    fireOut, prevExpandDim = model_base.conv_fire_parallel_inception_module('conv1', images, kwargs.get('imageChannels'),
+    fireOut, prevExpandDim = model_base.conv_fire_parallel_xception_module('conv1', images, kwargs.get('imageChannels'),
                                                                   {'cnn1x1': modelShape[0], 'cnn3x3': modelShape[0], 'cnn5x5': modelShape[0]},
                                                                   wd, **kwargs)
     # BATCH_NORM -> CONV1_TWIN
     if kwargs.get('batchNorm'):
         fireOut = model_base.batch_norm('batch_norm', fireOut, dtype)
     ############# CONV2_TWIN 3x3 conv, 64 input dims, 64 output dims (filters)
-    fireOut, prevExpandDim = model_base.conv_fire_parallel_module('conv2', fireOut, prevExpandDim,
+    fireOut, prevExpandDim = model_base.sep_conv_fire_parallel_module('conv2', fireOut, prevExpandDim,
                                                                   {'cnn1x1': modelShape[1]},
                                                                   wd, **kwargs)
     # BATCH_NORM -> CONV2_TWIN
@@ -72,14 +72,14 @@ def inference(images, **kwargs): #batchSize=None, phase='train', outLayer=[13,13
     pool = tf.nn.max_pool(fireOut, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1],
                           padding='SAME', name='maxpool1')
     ############# CONV3_TWIN 3x3 conv, 64 input dims, 64 output dims (filters)
-    fireOut, prevExpandDim = model_base.conv_fire_parallel_inception_module('conv3', pool, prevExpandDim,
+    fireOut, prevExpandDim = model_base.conv_fire_parallel_xception_module('conv3', pool, prevExpandDim,
                                                                   {'cnn1x1': modelShape[2], 'cnn3x3': modelShape[2], 'cnn5x5': modelShape[2]},
                                                                   wd, **kwargs)
     # BATCH_NORM -> CONV3_TWIN
     if kwargs.get('batchNorm'):
         fireOut = model_base.batch_norm('batch_norm', fireOut, dtype)
     ############# CONV4_TWIN 3x3 conv, 64 input dims, 64 output dims (filters)
-    fireOut, prevExpandDim = model_base.conv_fire_parallel_module('conv4', fireOut, prevExpandDim,
+    fireOut, prevExpandDim = model_base.sep_conv_fire_parallel_module('conv4', fireOut, prevExpandDim,
                                                                   {'cnn1x1': modelShape[3]},
                                                                   wd, **kwargs)
    # BATCH_NORM -> CONV4_TWIN
@@ -89,14 +89,14 @@ def inference(images, **kwargs): #batchSize=None, phase='train', outLayer=[13,13
     pool = tf.nn.max_pool(fireOut, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1],
                           padding='SAME', name='maxpool2')
     ############# CONV5 3x3 conv, 64 input dims, 64 output dims (filters)
-    fireOut, prevExpandDim = model_base.conv_fire_inception_module('conv5', pool, prevExpandDim,
+    fireOut, prevExpandDim = model_base.conv_fire_xception_module('conv5', pool, prevExpandDim,
                                                                   {'cnn1x1': modelShape[4], 'cnn3x3': modelShape[4], 'cnn5x5': modelShape[4]},
                                                          wd, **kwargs)
     # BATCH_NORM -> CONV5
     if kwargs.get('batchNorm'):
         fireOut = model_base.batch_norm('batch_norm', fireOut, dtype)
     ############# CONV6 3x3 conv, 64 input dims, 64 output dims (filters)
-    fireOut, prevExpandDim = model_base.conv_fire_module('conv6', fireOut, prevExpandDim,
+    fireOut, prevExpandDim = model_base.sep_conv_fire_module('conv6', fireOut, prevExpandDim,
                                                          {'cnn3x3': modelShape[5]},
                                                          wd, **kwargs)
     # BATCH_NORM -> CONV6
@@ -106,14 +106,14 @@ def inference(images, **kwargs): #batchSize=None, phase='train', outLayer=[13,13
     pool = tf.nn.max_pool(fireOut, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1],
                           padding='SAME', name='maxpool3')
     ############# CONV7 3x3 conv, 64 input dims, 64 output dims (filters)
-    fireOut, prevExpandDim = model_base.conv_fire_inception_module('conv7', pool, prevExpandDim,
+    fireOut, prevExpandDim = model_base.conv_fire_xception_module('conv7', pool, prevExpandDim,
                                                                   {'cnn1x1': modelShape[6], 'cnn3x3': modelShape[6], 'cnn5x5': modelShape[6]},
                                                          wd, **kwargs)
     # BATCH_NORM -> CONV7
     if kwargs.get('batchNorm'):
         fireOut = model_base.batch_norm('batch_norm', fireOut, dtype)
     ############# CONV8 3x3 conv, 64 input dims, 64 output dims (filters)
-    fireOut, prevExpandDim = model_base.conv_fire_module('conv8', fireOut, prevExpandDim,
+    fireOut, prevExpandDim = model_base.sep_conv_fire_module('conv8', fireOut, prevExpandDim,
                                                          {'cnn3x3': modelShape[7]},
                                                          wd, **kwargs)
     # BATCH_NORM -> CONV8
