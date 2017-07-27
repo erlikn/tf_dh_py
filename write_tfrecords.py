@@ -107,7 +107,7 @@ def train():
                                      trainable=False)
 
         # Get images and transformation for model_cnn.
-        imagesOrig, images, pOrig, tHAB, tfrecFileIDs = data_input.inputs(**modelParams)
+        imagesOrig, images, pOrig, tHAB, prevPredHAB, tfrecFileIDs = data_input.inputs(**modelParams)
 
         # Build a Graph that computes the HAB predictions from the
         # inference model.
@@ -148,7 +148,7 @@ def train():
             print('Warping images with batch size %d in %d steps' % (modelParams['activeBatchSize'], stepsForOneDataRound))
             for step in xrange(stepsForOneDataRound):
                 startTime = time.time()
-                evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, evlossValue = sess.run([imagesOrig, images, pOrig, tHAB, pHAB, tfrecFileIDs, loss])
+                evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evprevPredHAB, evtfrecFileIDs, evlossValue = sess.run([imagesOrig, images, pOrig, tHAB, pHAB, prevPredHAB, tfrecFileIDs, loss])
                 durationSum += (time.time() - startTime)
                 HABRES = evtHAB-evpHAB
                 HABperPixel = 0
@@ -159,7 +159,7 @@ def train():
                 HABperPixel = HABperPixel/modelParams['activeBatchSize']
                 HABperPixelsum += HABperPixel
                 #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
-                data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
+                data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evprevPredHAB, evtfrecFileIDs, **modelParams)
                 # Print Progress Info
                 if ((step % FLAGS.ProgressStepReportStep) == 0) or ((step+1) == stepsForOneDataRound):
                     print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % 
