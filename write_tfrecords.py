@@ -31,7 +31,7 @@ PHASE = 'train'
 # import json_maker, update json files and read requested json file
 import Model_Settings.json_maker as json_maker
 json_maker.recompile_json_files()
-jsonToRead = '170127_TWN_MOM_B.json'
+jsonToRead = 'GPUINC_170301_ITR_B_2.json'
 print("Reading %s" % jsonToRead)
 with open('Model_Settings/'+jsonToRead) as data_file:
     modelParams = json.load(data_file)
@@ -135,7 +135,7 @@ def train():
 
         # restore a saver.
         saver = tf.train.Saver(tf.global_variables())
-        saver.restore(sess, modelParams['trainLogDir']+'/model.ckpt-89999')
+        saver.restore(sess, modelParams['trainLogDir']+'/model.ckpt-'+str(modelParams['trainMaxSteps']))
 
         # Start the queue runners.
         tf.train.start_queue_runners(sess=sess)

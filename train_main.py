@@ -41,9 +41,17 @@ json_maker.recompile_json_files()
 #jsonToRead = 'GPUX_170301_ITR_B_2.json' #Done
 #jsonToRead = 'GPUX_170301_ITR_B_3.json' #Done
 #jsonToRead = 'GPUX_170301_ITR_B_4.json' #Done
+
 #jsonToRead = 'GPUT32_170301_ITR_B_1.json' #InProgress -- 
-#jsonToRead = 'GPUINC_170301_ITR_B_1.json' #InProgress
-jsonToRead = 'GPUXCE_170301_ITR_B_1.json' #InProgress
+
+#jsonToRead = 'GPUINC_170301_ITR_B_1.json' #Done
+#jsonToRead = 'GPUINC_170301_ITR_B_2.json' #Done
+#jsonToRead = 'GPUINC_170301_ITR_B_3.json' #InProgress
+#jsonToRead = 'GPUINC_170301_ITR_B_3.json' #InProgress
+
+#jsonToRead = 'GPUT64_170301_ITR_B_1.json' #InProgress
+
+#jsonToRead = 'GPUXCE_170301_ITR_B_1.json' #InProgress
 print("Reading %s" % jsonToRead)
 with open('Model_Settings/'+jsonToRead) as data_file:
     modelParams = json.load(data_file)
@@ -253,9 +261,9 @@ def main(argv=None):  # pylint: disable=unused-argumDt
     #print('Test  Logs Output: %s' % modelParams['testLogDir'])
     print('Train Warp Output: %s' % modelParams['warpedTrainDataDir'])
     #print('Test  Warp Output: %s' % modelParams['warpedTestDataDir'])
-    if input("(Overwrite WARNING) Did you change logs directory? ") != "yes":
-        print("Please consider changing logs directory in order to avoid overwrite!")
-        return
+    #if input("(Overwrite WARNING) Did you change logs directory? ") != "yes":
+    #    print("Please consider changing logs directory in order to avoid overwrite!")
+    #    return
     if tf.gfile.Exists(modelParams['trainLogDir']):
         tf.gfile.DeleteRecursively(modelParams['trainLogDir'])
     tf.gfile.MakeDirs(modelParams['trainLogDir'])
