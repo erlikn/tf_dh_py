@@ -22,37 +22,37 @@ import Data_IO.tfrecord_io as tfrecord_io
 NUM_OF_TEST_PERTURBED_IMAGES = 5
 NUM_OF_TRAIN_PERTURBED_IMAGES = 7
 
-def _warp_wOut_orig_newTarget(imageDuo, pHAB):
-    """
-    FIX BEFORE USE
-    """
-    # update the 
-    # split for depth dimension
-    orig, pert = np.asarray(np.split(imageDuo, 2, axis=2))
-    orig = orig.reshape([orig.shape[0], orig.shape[1]])
-    pert = pert.reshape([pert.shape[0], pert.shape[1]])
-    
-    # p & 0 is top left    - 1 is top right
-    # 2     is bottom left - 3 is bottom right
-    pRow = 0
-    pCol = 0
-    squareSize = orig.shape[0]
+### def _warp_wOut_orig_newTarget(imageDuo, pHAB):
+###     """
+###     FIX BEFORE USE
+###     """
+###     # update the 
+###     # split for depth dimension
+###     orig, pert = np.asarray(np.split(imageDuo, 2, axis=2))
+###     orig = orig.reshape([orig.shape[0], orig.shape[1]])
+###     pert = pert.reshape([pert.shape[0], pert.shape[1]])
+###     
+###     # p & 0 is top left    - 1 is top right
+###     # 2     is bottom left - 3 is bottom right
+###     pRow = 0
+###     pCol = 0
+###     squareSize = orig.shape[0]
+### 
+###     pOrig = np.array([[pRow, pRow, pRow+squareSize, pRow+squareSize],
+###                       [pCol, pCol+squareSize, pCol, pCol+squareSize]], np.float32)
+###     pPert = np.asarray(pOrig+pHAB)
+###     # get transformation matrix and transform the image to new space
+###     Hmatrix = cv2.getPerspectiveTransform(np.transpose(pOrig), np.transpose(pPert))
+###     pert = cv2.warpPerspective(orig, Hmatrix, (orig.shape[0], orig.shape[1]))
+###     return orig, pert
 
-    pOrig = np.array([[pRow, pRow, pRow+squareSize, pRow+squareSize],
-                      [pCol, pCol+squareSize, pCol, pCol+squareSize]], np.float32)
-    pPert = np.asarray(pOrig+pHAB)
-    # get transformation matrix and transform the image to new space
-    Hmatrix = cv2.getPerspectiveTransform(np.transpose(pOrig), np.transpose(pPert))
-    pert = cv2.warpPerspective(orig, Hmatrix, (orig.shape[0], orig.shape[1]))
-    return orig, pert
-
-def _warp_w_orig_newTarget(imageOrig, imageDuo, pOrig, cHAB, **kwargs):
+def _warp_w_orig_newOrig(imageOrig, patchDuo, pOrig, cHAB, **kwargs):
     # update the Perturbed image given the original image
 
     # split for depth dimension
-    orig, pert = np.asarray(np.split(imageDuo, 2, axis=2))
+    orig, pert = np.asarray(np.split(patchDuo, 2, axis=2))
     orig = orig.reshape([orig.shape[0], orig.shape[1]])
-
+    pert = pert.reshape([pert.shape[0], pert.shape[1]])
     # Get the correct box information
     # p & 0 is top left    - 1 is top right
     # 2     is bottom left - 3 is bottom right
@@ -68,18 +68,18 @@ def _warp_w_orig_newTarget(imageOrig, imageDuo, pOrig, cHAB, **kwargs):
     pPert = np.asarray(pOrig+cHAB)
     # get transformation matrix and transform the image to new space
     Hmatrix = cv2.getPerspectiveTransform(np.transpose(pOrig), np.transpose(pPert))
-    pert = cv2.warpPerspective(imageOrig, Hmatrix, (imageOrig.shape[1], imageOrig.shape[0]))
+    imgOrigPert = cv2.warpPerspective(imageOrig, Hmatrix, (imageOrig.shape[1], imageOrig.shape[0]))
 
     # crop the image at original location
-    pert = pert[pRow:pRow+squareSize, pCol:pCol+squareSize]
+    orig = imgOrigPert[pRow:pRow+squareSize, pCol:pCol+squareSize]
 
     # for TEST samples divide H_AB by 2 (64->32) and reduce divide image size by 4 (256x256->128x128)
     if kwargs.get('phase') == 'test':
-        pert = cv2.resize(pert, (orig.shape[1], orig.shape[0]))
+        orig = cv2.resize(orig, (pert.shape[1], pert.shape[0]))
 
     return orig, pert
 
-def output(batchImageOrig, batchImage, batchPOrig, batchTHAB, batchPHAB, batchTFrecFileIDs, **kwargs):
+def output(batchImageOrig, batchImage, batchPOrig, batchTHAB, batchPHAB, batchPrevPredHAB, batchTFrecFileIDs, **kwargs):
     """
     TODO: SIMILAR TO DATA INPUT -> WE NEED A QUEUE RUNNER TO WRITE THIS OFF TO BE FASTER 
 
@@ -95,23 +95,28 @@ def output(batchImageOrig, batchImage, batchPOrig, batchTHAB, batchPHAB, batchTF
     corrupt_patchPert=0
     corrupt_imageOrig=0
     for i in range(kwargs.get('activeBatchSize')):
+        
+        
+        ##### THIS IS THE ADDED PREDICTION SUM
+        cHAB = batchPrevPredHAB[i]+batchPHAB[i]
+        # put them in correct form
+        additivePredHAB = np.asarray([[cHAB[0], cHAB[1], cHAB[2], cHAB[3]],
+                                      [cHAB[4], cHAB[5], cHAB[6], cHAB[7]]], np.float32)
+        pOrig = np.asarray([[batchPOrig[i][0], batchPOrig[i][1], batchPOrig[i][2], batchPOrig[i][3]],
+                            [batchPOrig[i][4], batchPOrig[i][5], batchPOrig[i][6], batchPOrig[i][7]]])
+        ##### THIS IS THE CORRECT FUNCTION USING ADDITIVE PREDICTION ON ORIGINAL NON CHANGED IMGORIG
+        ### PATCH ORIG MOVES TOWARDS PATCH PERT
+        ### patchOrig is only changing, patchPert is never changing
+        patchOrig, patchPert = _warp_w_orig_newOrig(batchImageOrig[i], batchImage[i], pOrig, additivePredHAB, **kwargs)
+        #### THIS HAB IS THE NEW TARGET HAB
         # Get the difference of tHAB and pHAB, and make new perturbed image based on that
         cHAB = batchTHAB[i]-batchPHAB[i]
         # put them in correct form
-        HAB = np.asarray([[cHAB[0], cHAB[1], cHAB[2], cHAB[3]],
+        newTargetHAB = np.asarray([[cHAB[0], cHAB[1], cHAB[2], cHAB[3]],
                           [cHAB[4], cHAB[5], cHAB[6], cHAB[7]]], np.float32)
-        pOrig = np.asarray([[batchPOrig[i][0], batchPOrig[i][1], batchPOrig[i][2], batchPOrig[i][3]],
-                            [batchPOrig[i][4], batchPOrig[i][5], batchPOrig[i][6], batchPOrig[i][7]]])
-        if kwargs.get('warpOriginalImage'):
-            patchOrig, patchPert = _warp_w_orig_newTarget(batchImageOrig[i], batchImage[i], pOrig, HAB, **kwargs)
-            # NOT DEVELOPED YET
-            #imageOrig, imagePert = _warp_w_orig_newOrig(batchImageOrig[i], batchImage[i], pOrig, batchPHAB[i], **kwargs)
-        else:
-            patchOrig, patchPert = _warp_wOut_orig_newTarget(batchImage[i], batchPHAB[i])
-
         # Write each Tensorflow record
         fileIDs = str(batchTFrecFileIDs[i][0]) + '_' + str(batchTFrecFileIDs[i][1])
-        tfrecord_io.tfrecord_writer(batchImageOrig[i], patchOrig, patchPert, pOrig, HAB,
+        tfrecord_io.tfrecord_writer(batchImageOrig[i], patchOrig, patchPert, pOrig, newTargetHAB, additivePredHAB,
                                     kwargs.get('warpedOutputFolder')+'/',
                                     fileIDs, batchTFrecFileIDs[i])
         if batchImageOrig[i].shape[0] != 240:
@@ -133,7 +138,7 @@ def _set_folders(folderPath):
     if not os.path.exists(folderPath):
         os.makedirs(folderPath)
 
-def output_with_test_image_files(batchImageOrig, batchImage, batchPOrig, batchTHAB, batchPHAB, batchTFrecFileIDs, **kwargs):
+def output_with_test_image_files(batchImageOrig, batchImage, batchPOrig, batchTHAB, batchPHAB, batchPrevPredHAB, batchTFrecFileIDs, **kwargs):
     """
     TODO: SIMILAR TO DATA INPUT -> WE NEED A QUEUE RUNNER TO WRITE THIS OFF TO BE FASTER 
 
@@ -150,11 +155,12 @@ def output_with_test_image_files(batchImageOrig, batchImage, batchPOrig, batchTH
     corrupt_patchOrig = 0
     corrupt_patchPert = 0
     corrupt_imageOrig = 0
-    dataJson = {'pOrig':[], 'tHAB':[], 'pHAB':[]}
+    dataJson = {'pOrig':[], 'tHAB':[], 'pHAB':[], 'prevPredHAB':[]}
     for i in range(kwargs.get('activeBatchSize')):
         dataJson['pOrig'] = batchPOrig[i].tolist()
         dataJson['tHAB'] = batchTHAB[i].tolist()
         dataJson['pHAB'] = batchPHAB[i].tolist()
+        dataJson['prevPredHAB'] = batchPrevPredHAB[i].tolist()
         write_json_file(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1]), dataJson)
         cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+ str(batchTFrecFileIDs[i][1])+'_fullOrig.jpg', batchImageOrig[i]*255)
 
@@ -162,25 +168,30 @@ def output_with_test_image_files(batchImageOrig, batchImage, batchPOrig, batchTH
         cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1])+'_ob.jpg', orig*255)
         cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1])+'_pb.jpg', pert*255)
 
-        # Get the difference of tHAB and pHAB, and make new perturbed image based on that
-        cHAB = batchTHAB[i]-batchPHAB[i]
+        ##### THIS IS THE ADDED PREDICTION SUM
+        cHAB = batchPrevPredHAB[i]+batchPHAB[i]
         # put them in correct form
-        HAB = np.asarray([[cHAB[0], cHAB[1], cHAB[2], cHAB[3]],
-                          [cHAB[4], cHAB[5], cHAB[6], cHAB[7]]], np.float32)
+        additivePredHAB = np.asarray([[cHAB[0], cHAB[1], cHAB[2], cHAB[3]],
+                                      [cHAB[4], cHAB[5], cHAB[6], cHAB[7]]], np.float32)
         pOrig = np.asarray([[batchPOrig[i][0], batchPOrig[i][1], batchPOrig[i][2], batchPOrig[i][3]],
                             [batchPOrig[i][4], batchPOrig[i][5], batchPOrig[i][6], batchPOrig[i][7]]])
-        if kwargs.get('warpOriginalImage'):
-            patchOrig, patchPert = _warp_w_orig_newTarget(batchImageOrig[i], batchImage[i], pOrig, HAB, **kwargs)
-            # NOT DEVELOPED YET
-            #imageOrig, imagePert = _warp_w_orig_newOrig(batchImageOrig[i], batchImage[i], pOrig, batchPHAB[i], **kwargs)
-        else:
-            patchOrig, patchPert = _warp_wOut_orig_newTarget(batchImage[i], batchPHAB[i])
+        ##### THIS IS THE CORRECT FUNCTION USING ADDITIVE PREDICTION ON ORIGINAL NON CHANGED IMGORIG
+        ### PATCH ORIG MOVES TOWARDS PATCH PERT
+        ### patchOrig is only changing, patchPert is never changing
+        patchOrig, patchPert = _warp_w_orig_newOrig(batchImageOrig[i], batchImage[i], pOrig, additivePredHAB, **kwargs)
 
         cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1])+'_op.jpg', patchOrig*255)
         cv2.imwrite(imagesOutputFolder+str(batchTFrecFileIDs[i][0])+'_'+str(batchTFrecFileIDs[i][1])+'_pp.jpg', patchPert*255)
+        
+        #### THIS HAB IS THE NEW TARGET HAB
+        # Get the difference of tHAB and pHAB, and make new perturbed image based on that
+        cHAB = batchTHAB[i]-batchPHAB[i]
+        # put them in correct form
+        newTargetHAB = np.asarray([[cHAB[0], cHAB[1], cHAB[2], cHAB[3]],
+                          [cHAB[4], cHAB[5], cHAB[6], cHAB[7]]], np.float32)
         # Write each Tensorflow record
         fileIDs = str(batchTFrecFileIDs[i][0]) + '_' + str(batchTFrecFileIDs[i][1])
-        tfrecord_io.tfrecord_writer(batchImageOrig[i], patchOrig, patchPert, pOrig, HAB,
+        tfrecord_io.tfrecord_writer(batchImageOrig[i], patchOrig, patchPert, pOrig, newTargetHAB, additivePredHAB,
                                     kwargs.get('warpedOutputFolder')+'/',
                                     fileIDs, batchTFrecFileIDs[i])
         if batchImageOrig[i].shape[0] != 240:

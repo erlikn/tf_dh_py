@@ -103,7 +103,7 @@ def test():
 
     with tf.Graph().as_default():
         # Get images and transformation for model_cnn.
-        imagesOrig, images, pOrig, tHAB, tfrecFileIDs = data_input.inputs(**modelParams)
+        imagesOrig, images, pOrig, tHAB, prevPredHAB, tfrecFileIDs = data_input.inputs(**modelParams)
 
         # Build a Graph that computes the HAB predictions from the
         # inference model.
@@ -154,7 +154,7 @@ def test():
         for step in xrange(modelParams['maxSteps']):
             # run and get inference
             startTime = time.time()
-            evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, evlossValue = sess.run([imagesOrig, images, pOrig, tHAB, pHAB, tfrecFileIDs, loss])
+            evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evprevPredHAB, evtfrecFileIDs, evlossValue = sess.run([imagesOrig, images, pOrig, tHAB, pHAB, prevPredHAB, tfrecFileIDs, loss])
             duration = time.time() - startTime
             # Calculate actual pixel errors for the current batch with inference results 
             durationSum += duration
@@ -202,7 +202,7 @@ def test():
             #if (step == 0):
             #    data_output.output_with_test_image_files(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
             #else:
-            data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evtfrecFileIDs, **modelParams)
+            data_output.output(evImagesOrig, evImages, evPOrig, evtHAB, evpHAB, evprevPredHAB, evtfrecFileIDs, **modelParams)
             stepFinal = step
 
         step = stepFinal+1

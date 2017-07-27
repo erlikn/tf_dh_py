@@ -44,7 +44,7 @@ def image_process_subMean_divStd_n1p1(img):
     return out
 
 def perturb_writer( ID, idx,
-                    imgOrig, imgPatchOrig, imgPatchPert, HAB, pOrig,
+                    imgOrig, imgPatchOrig, imgPatchPert, targetHAB, pOrig,
                     tfRecFolder):
     ##### original patch
     #filename = filenameWrite.replace(".jpg", "_"+ str(idx) +"_orig.jpg")
@@ -71,7 +71,7 @@ def perturb_writer( ID, idx,
     # Tensorflow record
     filename = str(ID) + "_" + str(idx)
     fileID = [ID, idx]
-    tfrecord_io.tfrecord_writer(imgOrig, imgPatchOrig, imgPatchPert, pOrig, HAB, tfRecFolder, filename, fileID)
+    tfrecord_io.tfrecord_writer(imgOrig, imgPatchOrig, imgPatchPert, pOrig, targetHAB, targetHAB*0, tfRecFolder, filename, fileID)
 
     #imgOp = image_process_subMean_divStd(imgPatchOrig)
     #imgPp = image_process_subMean_divStd(imgPatchPert)

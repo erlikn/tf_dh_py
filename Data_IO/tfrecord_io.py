@@ -81,6 +81,7 @@ def parse_example_proto(exampleSerialized, **kwargs):
     featureMap = {
         'fileID': tf.FixedLenFeature([2], dtype=tf.int64),
         'HAB': tf.FixedLenFeature([8], dtype=tf.float32),
+        'PrevPredHAB': tf.FixedLenFeature([8], dtype=tf.float32),
         'pOrig': tf.FixedLenFeature([8], dtype=tf.float32),
         'image': tf.FixedLenFeature([], dtype=tf.string, default_value=''),
         'imageOrig': tf.FixedLenFeature([], dtype=tf.string, default_value='')
@@ -104,13 +105,14 @@ def parse_example_proto(exampleSerialized, **kwargs):
         
     fileID = features['fileID']
     HAB = features['HAB']
+    PrevPredHAB = features['PrevPredHAB']
     pOrig = features['pOrig']
 
     #validate_for_nan()
 
-    return imageOrig, image, pOrig, HAB, fileID
+    return imageOrig, image, pOrig, HAB, PrevPredHAB, fileID
 
-def tfrecord_writer(imageOrig, imgPatchOrig, imgPatchPert, pOrig, HAB, tfRecordFolder, tfFileName, fileID):
+def tfrecord_writer(imageOrig, imgPatchOrig, imgPatchPert, pOrig, HAB, PrevPredHAB, tfRecordFolder, tfFileName, fileID):
     """
     Converts a dataset to tfrecords
     imageOrig, imgPatchOrig, imgPatchPert => will be converted to float32
@@ -136,10 +138,14 @@ def tfrecord_writer(imageOrig, imgPatchOrig, imgPatchPert, pOrig, HAB, tfRecordF
     flatImage = np.asarray(flatImage, dtype)
     flatImageOrigList = flatImage.tostring()
 
+    PrevPredHABRow = np.asarray([PrevPredHAB[0][0], PrevPredHAB[0][1], PrevPredHAB[0][2], PrevPredHAB[0][3],
+                                 PrevPredHAB[1][0], PrevPredHAB[1][1], PrevPredHAB[1][2], PrevPredHAB[1][3]], np.float32)
+    PrevPredHABList = PrevPredHABRow.tolist()
 
     HABRow = np.asarray([HAB[0][0], HAB[0][1], HAB[0][2], HAB[0][3],
                          HAB[1][0], HAB[1][1], HAB[1][2], HAB[1][3]], np.float32)
     HABList = HABRow.tolist()
+
     pOrigRow = np.asarray([pOrig[0][0], pOrig[0][1], pOrig[0][2], pOrig[0][3],
                            pOrig[1][0], pOrig[1][1], pOrig[1][2], pOrig[1][3]], np.float32)
     pOrigList = pOrigRow.tolist()
@@ -147,6 +153,7 @@ def tfrecord_writer(imageOrig, imgPatchOrig, imgPatchPert, pOrig, HAB, tfRecordF
     example = tf.train.Example(features=tf.train.Features(feature={
         'fileID': _int64_array(fileID),
         'HAB': _float_nparray(HABList), # 2D np array
+        'PrevPredHAB': _float_nparray(PrevPredHABList), # 2D np array
         'pOrig': _float_nparray(pOrigList), # 2D np array
         'image': _bytes_feature(flatImageList),
         'imageOrig': _bytes_feature(flatImageOrigList)
