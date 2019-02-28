@@ -44,7 +44,7 @@ json_maker.recompile_json_files()
 
 #jsonToRead = 'GPUT32_170301_ITR_B_1.json' #InProgress -- 
 
-#jsonToRead = 'GPUINC_170301_ITR_B_1.json' #Done
+jsonToRead = 'GPUINC_170301_ITR_B_1.json' #Done
 #jsonToRead = 'GPUINC_170301_ITR_B_2.json' #Done
 #jsonToRead = 'GPUINC_170301_ITR_B_3.json' #InProgress
 #jsonToRead = 'GPUINC_170301_ITR_B_3.json' #InProgress
@@ -151,7 +151,6 @@ def train():
         #init = tf.initialize_all_variables()
         init = tf.global_variables_initializer()
 
-        opCheck = tf.add_check_numerics_ops()
         # Start running operations on the Graph.
         config = tf.ConfigProto(log_device_placement=modelParams['logDevicePlacement'])
         config.gpu_options.allow_growth = True

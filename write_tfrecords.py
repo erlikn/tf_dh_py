@@ -31,7 +31,13 @@ PHASE = 'train'
 # import json_maker, update json files and read requested json file
 import Model_Settings.json_maker as json_maker
 json_maker.recompile_json_files()
-jsonToRead = 'GPUINC_170301_ITR_B_2.json'
+
+jsonToRead = 'GPUT32_170301_ITR_B_1.json' #InProgress -- 
+#jsonToRead = 'GPUT32_170301_ITR_B_2.json' #InProgress -- 
+#jsonToRead = 'GPUT32_170301_ITR_B_3.json' #InProgress -- 
+#jsonToRead = 'GPUT32_170301_ITR_B_4.json' #InProgress -- 
+
+
 print("Reading %s" % jsonToRead)
 with open('Model_Settings/'+jsonToRead) as data_file:
     modelParams = json.load(data_file)

@@ -19,7 +19,7 @@ from joblib import Parallel, delayed
 import multiprocessing
 
 import os
-import tfrecord_io
+import Data_IO.tfrecord_io as tfrecord_io
 
 # Global Variables
 NUM_OF_TEST_PERTURBED_IMAGES = 5
@@ -69,7 +69,7 @@ def perturb_writer( ID, idx,
     # Tensorflow record
     filename = str(ID) + "_" + str(idx)
     fileID = [ID, idx]
-    tfrecord_io.tfrecord_writer(imgOrig, imgPatchOrig, imgPatchPert, pOrig, HAB, tfRecFolder, filename, fileID)
+    tfrecord_io.tfrecord_writer(imgOrig, imgPatchOrig, imgPatchPert, pOrig, HAB, HAB*0, tfRecFolder, filename, fileID)
 
     #imgOp = image_process_subMean_divStd(imgPatchOrig)
     #imgPp = image_process_subMean_divStd(imgPatchPert)
@@ -167,9 +167,9 @@ def prepare_dataset(datasetType, readFolder, tfRecFolder):
     tVar = np.asarray([0.0, 0.0])
     #for filename in filenames:
     num_cores = multiprocessing.cpu_count()
-    #for i in range(len(filenames)):
-    #    process_dataset(startTime, durationSum, filenames, datasetType, readFolder, tfRecFolder, i)
-    Parallel(n_jobs=num_cores)(delayed(process_dataset)(startTime, durationSum, filenames, datasetType, readFolder, tfRecFolder, i) for i in range(len(filenames)))
+    for i in range(len(filenames)):
+        process_dataset(startTime, durationSum, filenames, datasetType, readFolder, tfRecFolder, i)
+    #Parallel(n_jobs=num_cores)(delayed(process_dataset)(startTime, durationSum, filenames, datasetType, readFolder, tfRecFolder, i) for i in range(len(filenames)))
     i = len(filenames)
     print('100%  Done')
     #print('Perturbation Statistics: Average MuXY = %.1f, %.1f , VarXY = %.1f, %.1f , Files = %d' % (tMu[0]/i, tMu[1]/i, tVar[0]/i, tVar[1]/i, totalCount))
@@ -180,8 +180,8 @@ def divide_train_test(readFolder, trainFolder, testFolder):
     filenames = [f for f in listdir(readFolder) if isfile(join(readFolder, f))]
     print('Train folder:', trainFolder)
     print('Test folder:', testFolder)
-    # 5000 test subjects
-    testSelector = random.sample(range(0, len(filenames)), 5000)
+    # 10% test subjects
+    testSelector = random.sample(range(0, len(filenames)), int(len(filenames)*.1))
         
     i = 0
     trainCounter = 0
@@ -202,27 +202,27 @@ def divide_train_test(readFolder, trainFolder, testFolder):
 
         if math.floor((i*10)/len(filenames)) != math.floor(((i-1)*10)/len(filenames)):
             print(str(math.floor((i*100)/len(filenames)))+'%  '+str(i))
-            print(str(testCounter)+' out of 5000')
-            print(str(trainCounter)+' out of '+str(len(filenames)-5000))
+            print(str(testCounter)+' out of '+str(int(len(filenames)*.1)))
+            print(str(trainCounter)+' out of '+str(len(filenames)-int(len(filenames)*.1)))
         i = i+1
 
 
 
-dataRead = "../../Data/MSCOCO_orig/"
+dataRead = "../Data/MSCOCO_orig/"
 
-train320 = "../../Data/320_240_train/"
-traintfRecordFLD = "../../Data/128_train_tfrecords/"
+train320 = "../Data/320_240_train/"
+traintfRecordFLD = "../Data/128_train_tfrecords/"
 
 
-test640 = "../../Data/640_480_test/"
-testtfRecordFLD = "../../Data/128_test_tfrecords/"
+test640 = "../Data/640_480_test/"
+testtfRecordFLD = "../Data/128_test_tfrecords/"
 
-#_set_folders(train320)
-#_set_folders(traintfRecordFLD)
-#_set_folders(test640)
+_set_folders(train320)
+_set_folders(traintfRecordFLD)
+_set_folders(test640)
 _set_folders(testtfRecordFLD)
 
-""" Divide dataset (87XXXX) to (5000) test and (82XXX) training samples"""
+""" Divide dataset (87XXXX) to (10%) test and (90%) training samples"""
 #divide_train_test(dataRead, train320, test640)
 
 """
@@ -236,4 +236,4 @@ prepare_dataset("test", test640, testtfRecordFLD)
     generate  Samples
     Total Files =  orig +  pert + 25,000 HAB = 
 """
-#prepare_dataset("train", train320, traintfRecordFLD)
+prepare_dataset("train", train320, traintfRecordFLD)

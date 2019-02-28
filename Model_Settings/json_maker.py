@@ -861,8 +861,8 @@ def write_iterative():
         data['modelShape'] = [32, 32, 32, 32, 64, 64, 64, 64, 1024]
         ### ITERATION 1
         runName = 'GPUINC_170301_ITR_B_1'
-        data['trainDataDir'] = '../Data/128_train_tfrecords_ob_32'
-        data['testDataDir'] = '../Data/128_test_tfrecords_ob_64'
+        data['trainDataDir'] = '../Data/128_train_tfrecords'
+        data['testDataDir'] = '../Data/128_test_tfrecords'
         data['trainLogDir'] = trainLogDirBase + runName
         data['testLogDir'] = testLogDirBase + runName
         data['warpedTrainDataDir'] = warpedImageTrainBase + runName
@@ -933,8 +933,8 @@ def write_iterative():
         data['modelShape'] = [32, 32, 64, 64, 128, 128, 256, 256, 1024]
         ### ITERATION 1
         runName = 'GPUXCE_170301_ITR_B_1'
-        data['trainDataDir'] = '../Data/128_train_tfrecords_ob_32'
-        data['testDataDir'] = '../Data/128_test_tfrecords_ob_32'
+        data['trainDataDir'] = '../Data/128_train_tfrecords'
+        data['testDataDir'] = '../Data/128_test_tfrecords'
         data['trainLogDir'] = trainLogDirBase + runName
         data['testLogDir'] = testLogDirBase + runName
         data['warpedTrainDataDir'] = warpedImageTrainBase + runName

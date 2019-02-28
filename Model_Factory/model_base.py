@@ -592,14 +592,17 @@ def train(loss, globalStep, **kwargs):
     lossAveragesOp = loss_base.add_loss_summaries(loss, kwargs.get('activeBatchSize', None))
     
     # Compute gradients.
+    update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS) # for batchnorm
     tvars = tf.trainable_variables()
-    with tf.control_dependencies([lossAveragesOp]):
+    with tf.control_dependencies(update_ops):
         if kwargs.get('optimizer') == 'AdamOptimizer':
             optim = tf.train.AdamOptimizer(learning_rate=optimizerParams['learningRate'], epsilon=optimizerParams['epsilon'])
         if kwargs.get('optimizer') == 'MomentumOptimizer':
             optim = tf.train.MomentumOptimizer(learning_rate=optimizerParams['learningRate'], momentum=optimizerParams['momentum'])
         if kwargs.get('optimizer') == 'GradientDescentOptimizer':
             optim = tf.train.GradientDescentOptimizer(learning_rate=optimizerParams['learningRate'])
+        if kwargs.get('optimizer') == 'AdaGrad':
+            optim = tf.train.AdamOptimizer(learning_rate=optimizerParams['learningRate'])
 
         grads, norm = tf.clip_by_global_norm(tf.gradients(loss, tvars), kwargs.get('clipNorm'))
 
