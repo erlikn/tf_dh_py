@@ -10,7 +10,8 @@ To run the code please follow the following steps:
 6. Running the "python3 write_tfrecords.py" will produce the tfrecords of trained model to be used for the next CNN in the chain.
 
 Please cite:
- @InProceedings{Nowruzi_2017_ICCV_Workshops,
+
+@InProceedings{Nowruzi_2017_ICCV_Workshops,
 author = {Erlik Nowruzi, Farzan and Laganiere, Robert and Japkowicz, Nathalie},
 title = {Homography Estimation From Image Pairs With Hierarchical Convolutional Networks},
 booktitle = {The IEEE International Conference on Computer Vision (ICCV) Workshops},
